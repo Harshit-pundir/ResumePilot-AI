@@ -75,5 +75,10 @@ def upload():
     }).execute()
     return jsonify(user_data)
 
+@app.route('/history', methods=["GET"])
+def history():
+    result = supabase.table("ats_results").select("*").execute()
+    return jsonify(result.data)
+
 if __name__ == "__main__":
     app.run(host="127.0.0.1", port=5000, debug=True)
