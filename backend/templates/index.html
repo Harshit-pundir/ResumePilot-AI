@@ -43,6 +43,23 @@
         margin: 5px 0;
         border-radius: 4px;
     }
+    .keyword-match {
+        background-color: #d4edda;
+        color: #155724;
+        padding: 3px 8px;
+        border-radius: 12px;
+        margin: 2px;
+        display: inline-block;
+    }
+
+    .keyword-miss {
+        background-color: #f8d7da;
+        color: #721c24;
+        padding: 3px 8px;
+        border-radius: 12px;
+        margin: 2px;
+        display: inline-block;
+    }
 </style>
 </head>
 
@@ -84,8 +101,8 @@
         btn.disabled = false;
         document.getElementById('result').innerHTML = `
             <h2 style="color:${color}">Score: ${data.Score.toFixed(2)}%</h2>
-            <p>Matched: ${data.KeyWord_exists.join(', ')}</p>
-            <p>Missing: ${data.KeyWord_not_exist.join(', ')}</p>
+            <p>Matched: ${data.KeyWord_exists.map(k => `<span class="keyword-match">${k}</span>`).join(' ')}</p>
+            <p>Missing: ${data.KeyWord_not_exist.map(k => `<span class="keyword-miss">${k}</span>`).join(' ')}</p>
             <p>Skills Score: ${data.section_scores.skills_score.toFixed(2)}%</p>
             <p>Projects Score: ${data.section_scores.projects_score.toFixed(2)}%</p>
             <p>Education Score: ${data.section_scores.education_score.toFixed(2)}%</p>
