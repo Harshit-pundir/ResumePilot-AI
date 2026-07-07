@@ -36,6 +36,13 @@
         background-color: #f0f0f0;
         border-radius: 5px;
     }
+    .tip-card {
+        background-color: #fff3cd;
+        border-left: 4px solid #ffc107;
+        padding: 8px 12px;
+        margin: 5px 0;
+        border-radius: 4px;
+    }
 </style>
 </head>
 
@@ -83,7 +90,7 @@
             <p>Projects Score: ${data.section_scores.projects_score.toFixed(2)}%</p>
             <p>Education Score: ${data.section_scores.education_score.toFixed(2)}%</p>
             <h3>💡 Tips:</h3>
-            ${data.Unmatched_keyword_tips.map(tip => `<p>• ${tip}</p>`).join('')}
+            ${data.Unmatched_keyword_tips.map(tip => `<div class="tip-card">• ${tip}</div>`).join('')}
         `;
     });
     </script>
