@@ -55,6 +55,13 @@ def score_sections(sections, jd_tokens):
         result[section_name + "_score"] = round((len(matched) / total * 100), 2) if total > 0 else 0
     return result
 
+def generate_tips(unmatched_keywords):
+    result= []
+    for keyword in unmatched_keywords:
+        list = f"Add {keyword} experience in your projects section"
+        result.append(list)
+
+    return result    
 
 # ── Routes ───────────────────────────────────────────────
 @app.route("/")
@@ -84,7 +91,7 @@ def upload():
     score = round((len(matched) / total * 100), 2) if total > 0 else 0
 
     section_scores = score_sections(sections, jd_tokens)
-    
+    unmatched_word_tips = generate_tips(unmatched)
 
     supabase.table("ats_results").insert({
         "job_description": jd_text,
@@ -97,7 +104,8 @@ def upload():
         "Score": score,
         "KeyWord_exists": matched,
         "KeyWord_not_exist": unmatched,
-        "section_scores": section_scores
+        "section_scores": section_scores,
+        "Unmatched_keyword_tips" : unmatched_word_tips
     })
 
 
