@@ -69,6 +69,8 @@ def generate_tips(unmatched_keywords):
         else:
             tip = f"Consider adding '{keyword}' experience to strengthen your resume"    
 
+        result.append(tip)    
+
     return result    
 
 # ── Routes ───────────────────────────────────────────────

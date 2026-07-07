@@ -92,4 +92,4 @@ resume-ats-analyzer/
 ## 👨‍💻 Built by
 
 **Harshit Pundir** — 3rd year CSE @ Quantum University  
-[LinkedIn](https://linkedin.com/in/harshit-pundir) · [GitHub](https://github.com/Harshit-pundir) · [LeetCode](https://leetcode.com/Harshitpundir)
+[LinkedIn](https://www.linkedin.com/in/harshit-pundir-a5b112332/) · [GitHub](https://github.com/Harshit-pundir) · [LeetCode](https://leetcode.com/Harshitpundir)
