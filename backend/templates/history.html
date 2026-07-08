@@ -50,7 +50,8 @@
                 </td>
                 <td>{{ result.created_at }}</td>
                 <td>{{ result.filename }}</td>
-                <td><a href="/delete/{{ result.id }}">🗑️ Delete</a></td>
+                <td><a href="/delete/{{ result.id }}" onclick="return confirm('Are you sure you want to delete this entry?')">🗑️ Delete</a></td>
+                
             </tr>
             {% endfor %}
             
