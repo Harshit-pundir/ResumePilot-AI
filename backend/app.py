@@ -108,7 +108,9 @@ def upload():
         "job_description": jd_text,
         "score": score,
         "matched_keywords": matched,
-        "missing_keywords": unmatched
+        "missing_keywords": unmatched,
+        "filename": file.filename
+
     }).execute()
 
     return jsonify({
