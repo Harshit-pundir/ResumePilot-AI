@@ -9,6 +9,9 @@
 <body>
     
     <h1>History</h1>
+    {% for message in get_flashed_messages() %}
+        <p style="color:green;">{{ message }}</p>
+    {% endfor %}
     <button onclick="window.location.href='/'">← Back</button>
     <input type="text" id="search" placeholder="Search by job description...">
     <button onclick="sortByScore()">Sort by Score ↓</button>

@@ -1,4 +1,4 @@
-from flask import Flask, render_template, request, jsonify, redirect, url_for
+from flask import Flask, flash, render_template, request, jsonify, redirect, url_for ,get_flashed_messages
 from PyPDF2 import PdfReader
 from supabase import create_client
 from dotenv import load_dotenv
@@ -15,7 +15,7 @@ SUPABASE_KEY = os.getenv("SUPABASE_KEY")
 supabase = create_client(SUPABASE_URL, SUPABASE_KEY)
 
 app = Flask(__name__)
-
+app.secret_key = os.getenv("SECRET_KEY")
 
 # ── Helper Functions ─────────────────────────────────────
 def extract_text_from_pdf(file):
@@ -149,6 +149,7 @@ def history():
 @app.route("/delete/<int:id>")
 def delete(id):
     result = supabase.table("ats_results").delete().eq("id",id).execute()
+    flash("Entry deleted successfully!")
     return  redirect(url_for('history'))
 
 
