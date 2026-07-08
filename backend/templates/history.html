@@ -26,11 +26,12 @@
             {% for result in results %}
             <tr>
                 <td>{{ result.job_description }}</td>
-                <td>{{ result.score }}</td>
+                <td style="color: {% if result.score >= 80 %}green{% elif result.score >= 50 %}orange{% else %}red{% endif %}">
+                    {{ result.score }}
+                </td>
                 <td>{{ result.matched_keywords }}</td>
                 <td>{{ result.missing_keywords }}</td>
                 <td>{{ result.created_at }}</td>
-
             </tr>
             {% endfor %}
             
