@@ -4,6 +4,7 @@ from supabase import create_client
 from dotenv import load_dotenv
 import os
 import spacy
+from datetime import datetime
 
 # ── Config ──────────────────────────────────────────────
 load_dotenv()
@@ -122,6 +123,9 @@ def upload():
 @app.route("/history", methods=["GET"])
 def history():
     result = supabase.table("ats_results").select("*").execute()
+    for row in result.data:
+        dt = datetime.fromisoformat(row['created_at'])
+        row['created_at'] = dt.strftime("%d %b %Y, %I:%M %p")
     return render_template("history.html", results=result.data)
 
 
