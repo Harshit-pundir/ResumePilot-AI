@@ -12,6 +12,7 @@
     <button onclick="window.location.href='/'">← Back</button>
     <input type="text" id="search" placeholder="Search by job description...">
     <button onclick="sortByScore()">Sort by Score ↓</button>
+    <p id="count"></p>
     <table>
         
         <thead>
@@ -82,6 +83,9 @@
             // Step 2: wapas append karo
             rows.forEach(row => tbody.appendChild(row));
         }
+
+        const totalRows = document.querySelectorAll('tbody tr').length;
+        document.getElementById('count').textContent = `Showing ${totalRows} results`;
     </script>
 </body>
 </html>
