@@ -7,8 +7,10 @@
     <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
 </head>
 <body>
+    
     <h1>History</h1>
     <button onclick="window.location.href='/'">← Back</button>
+    <input type="text" id="search" placeholder="Search by job description...">
     <table>
         
         <thead>
@@ -19,7 +21,7 @@
                 <th>Missing Keywords</th>
                 <th>Date</th>
                 <th>Action</th>
-                
+
             </tr>
         </thead>
         
@@ -48,5 +50,21 @@
         </tbody>
     </table>
 
+
+    <script>
+        document.getElementById('search').addEventListener('keyup', function() {
+            const searchValue = this.value.toLowerCase();
+            const rows = document.querySelectorAll('tbody tr');
+
+            rows.forEach(function(row) {
+                const jd = row.cells[0].textContent.toLowerCase();
+                if (jd.includes(searchValue)) {
+                    row.style.display = '';
+                } else {
+                    row.style.display = 'none';
+                }
+            });
+        });
+    </script>
 </body>
 </html>
