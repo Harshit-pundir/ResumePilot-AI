@@ -29,8 +29,16 @@
                 <td style="color: {% if result.score >= 80 %}green{% elif result.score >= 50 %}orange{% else %}red{% endif %}">
                     {{ result.score }}
                 </td>
-                <td>{{ result.matched_keywords }}</td>
-                <td>{{ result.missing_keywords }}</td>
+                <td>
+                    {% for keyword in result.matched_keywords %}
+                        <span class="keyword-match">{{ keyword }}</span>
+                    {% endfor %}
+                </td>
+                <td>
+                    {% for keyword in result.missing_keywords %}
+                        <span class="keyword-miss">{{ keyword }}</span>
+                    {% endfor %}
+                </td>
                 <td>{{ result.created_at }}</td>
             </tr>
             {% endfor %}
