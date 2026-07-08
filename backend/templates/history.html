@@ -13,6 +13,7 @@
     <input type="text" id="search" placeholder="Search by job description...">
     <button onclick="sortByScore()">Sort by Score ↓</button>
     <p id="count"></p>
+    <p id="avg"></p>
     <table>
         
         <thead>
@@ -86,6 +87,14 @@
 
         const totalRows = document.querySelectorAll('tbody tr').length;
         document.getElementById('count').textContent = `Showing ${totalRows} results`;
+
+        let total = 0;
+        const rows = document.querySelectorAll('tbody tr');
+        rows.forEach(row => {
+            total += parseFloat(row.cells[1].textContent);
+        });
+        const avg = (total / rows.length).toFixed(2);
+        document.getElementById('avg').textContent = `Average Score: ${avg}%`;
     </script>
 </body>
 </html>
