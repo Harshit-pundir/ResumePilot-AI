@@ -12,7 +12,7 @@ from flask import Flask
 from PyPDF2 import PdfReader
 from dotenv import load_dotenv
 from supabase import create_client
-
+import json
 import os
 import re
 import spacy
@@ -210,97 +210,55 @@ def extract_resume_sections(text):
 
     return sections
 
-
-# ==========================================================
-# EXTRACT IMPORTANT KEYWORDS
-# ==========================================================
-
-# ==========================================================
-# EXTRACT IMPORTANT KEYWORDS
+ 
+ # ==========================================================
+# LOAD KNOWING SKILLS
 # ==========================================================
 
-def get_tokens(text):
+
+def load_skills():
     """
-    Extract meaningful keywords from text.
-
-    This function:
-    1. Converts text into tokens
-    2. Removes stop words (is, the, of...)
-    3. Removes punctuation
-    4. Removes numbers
-    5. Converts words to their base form (lemma)
-
-    Example
-    -------
-    Input:
-        "Developed REST APIs using Java and Spring Boot"
-
-    Output:
-        {
-            "develop",
-            "rest",
-            "api",
-            "java",
-            "spring",
-            "boot"
-        }
+    Load all predefined skills from skills.json
     """
 
-    # Convert text into spaCy document
-    doc = nlp(text)
+    with open("skills.json", "r", encoding="utf-8") as file:
+        known_skills = json.load(file)
 
-    # Store unique keywords
-    keywords = set()
+    return known_skills
 
-    # Visit every word
-    for token in doc:
 
-        # Ignore numbers
-        if not token.is_alpha:
-            continue
-
-        # Ignore common words
-        if token.is_stop:
-            continue
-
-        # Convert to base form
-        keyword = token.lemma_.lower()
-
-        # Store keyword
-        keywords.add(keyword)
-
-    return keywords
-
-# ==========================================================
-# MATCH JD KEYWORDS WITH RESUME
-# ==========================================================
-
-def match_keywords(jd_keywords, resume_text):
+def extract_skills(resume_text, jd_text, known_skills):
     """
-    Compare Job Description keywords
-    with Resume.
-
-    Returns:
-        matched_keywords
-        missing_keywords
+    Extract skills present in
+    Resume and Job Description.
     """
 
-    matched_keywords = []
-    missing_keywords = []
+    # Convert to lowercase
+    resume_text = resume_text.lower()
+    jd_text = jd_text.lower()
 
-    # Check every JD keyword
-    for keyword in jd_keywords:
+    # Store unique skills
+    resume_skills = set()
+    jd_skills = set()
 
-        # Match whole word only
-        pattern = rf"\b{re.escape(keyword)}\b"
+    # Check every skill
+    for skill in known_skills:
+
+        pattern = rf"\b{re.escape(skill.lower())}\b"
 
         if re.search(pattern, resume_text):
+            resume_skills.add(skill)
 
-            matched_keywords.append(keyword)
+        if re.search(pattern, jd_text):
+            jd_skills.add(skill)
 
-        else:
+    return resume_skills, jd_skills
 
-            missing_keywords.append(keyword)
 
-    return matched_keywords, missing_keywords
+def match_skills(resume_skills, jd_skills):
 
+    matched_skills = resume_skills & jd_skills
+
+    missing_skills = jd_skills - resume_skills
+
+    return matched_skills, missing_skills

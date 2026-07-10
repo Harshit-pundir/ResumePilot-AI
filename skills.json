@@ -1,0 +1,39 @@
+[
+    "java",
+    "python",
+    "c",
+    "c++",
+    "javascript",
+    "typescript",
+    "html",
+    "css",
+
+    "flask",
+    "django",
+    "fastapi",
+
+    "spring",
+    "spring boot",
+    "hibernate",
+
+    "mysql",
+    "postgresql",
+    "mongodb",
+
+    "docker",
+    "kubernetes",
+
+    "git",
+    "github",
+
+    "aws",
+    "azure",
+
+    "machine learning",
+    "deep learning",
+    "tensorflow",
+    "pytorch",
+    "pandas",
+    "numpy",
+    "scikit-learn"
+]
