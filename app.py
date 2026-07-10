@@ -1,162 +1,276 @@
-from flask import Flask, flash, render_template, request, jsonify, redirect, url_for ,get_flashed_messages
-from PyPDF2 import PdfReader
-from supabase import create_client
-from dotenv import load_dotenv
-import os
-import spacy
-from datetime import datetime
+# ==========================================================
+# ATS RESUME SCORE CHECKER
+# Part 1 - Project Setup & Resume Parser
+# Author : Harshit Pundir
+# ==========================================================
 
-# ── Config ──────────────────────────────────────────────
+# -----------------------------
+# Import Required Libraries
+# -----------------------------
+
+from flask import Flask
+from PyPDF2 import PdfReader
+from dotenv import load_dotenv
+from supabase import create_client
+
+import os
+import re
+import spacy
+
+
+# -----------------------------
+# Load Environment Variables
+# -----------------------------
+# Reads variables from .env file
+
 load_dotenv()
+
+
+# -----------------------------
+# Load spaCy NLP Model
+# -----------------------------
+# This model helps us remove stop words,
+# convert words into their root form (lemma),
+# and process text efficiently.
+
 nlp = spacy.load("en_core_web_sm")
+
+
+# -----------------------------
+# Flask App
+# -----------------------------
+
+app = Flask(__name__)
+
+# Secret key is used for sessions and flash messages
+app.secret_key = os.getenv("SECRET_KEY")
+
+
+# -----------------------------
+# Supabase Configuration
+# -----------------------------
 
 SUPABASE_URL = os.getenv("SUPABASE_URL")
 SUPABASE_KEY = os.getenv("SUPABASE_KEY")
-supabase = create_client(SUPABASE_URL, SUPABASE_KEY)
 
-app = Flask(__name__)
-app.secret_key = os.getenv("SECRET_KEY")
+supabase = create_client(
+    SUPABASE_URL,
+    SUPABASE_KEY
+)
 
-# ── Helper Functions ─────────────────────────────────────
+
+# ==========================================================
+# PDF TEXT EXTRACTION
+# ==========================================================
+
 def extract_text_from_pdf(file):
+    """
+    Extract text from uploaded PDF.
+
+    Parameters
+    ----------
+    file : Uploaded PDF
+
+    Returns
+    -------
+    str
+        Complete resume text
+    """
+
     reader = PdfReader(file)
-    text = ""
+
+    complete_text = ""
+
+    # Read every page
 
     for page in reader.pages:
-        page_text = page.extract_text()
-        if page_text:
-            text += page_text + " "
 
-    return text.lower()
+        try:
+
+            page_text = page.extract_text()
+
+            # Some pages may return None
+            if page_text:
+
+                complete_text += page_text + " "
+
+        except Exception:
+
+            continue
+
+    return complete_text.lower()
 
 
-def extract_sections(text):
-    sections = {"skills": "", "projects": "", "education": ""}
-    if "technical skills" in text:
-        sections["skills"] = text.split("technical skills")[-1].split("leadership")[0]
-    if "projects" in text:
-        sections["projects"] = text.split("projects")[-1].split("technical skills")[0]
-    if "education" in text:
-        sections["education"] = text.split("education")[-1].split("projects")[0]
+# ==========================================================
+# RESUME SECTION EXTRACTOR
+# ==========================================================
+
+def extract_section(text, headings):
+    """
+    Extract a particular section
+    like Skills, Projects, Education etc.
+
+    Parameters
+    ----------
+    text : Resume text
+
+    headings : List of possible section names
+
+    Returns
+    -------
+    Extracted section text
+    """
+
+    # Escape special characters
+    pattern = "|".join(map(re.escape, headings))
+
+    regex = (
+        rf"(?:{pattern})"
+        rf"\s*(.*?)"
+        rf"(?=\b(?:"
+        rf"education|"
+        rf"projects|"
+        rf"experience|"
+        rf"skills|"
+        rf"technical skills|"
+        rf"certifications|"
+        rf"summary|"
+        rf"$)\b)"
+    )
+
+    match = re.search(
+        regex,
+        text,
+        re.IGNORECASE | re.DOTALL
+    )
+
+    if match:
+        return match.group(1).strip()
+
+    return ""
+
+
+# ==========================================================
+# EXTRACT ALL SECTIONS
+# ==========================================================
+
+def extract_resume_sections(text):
+    """
+    Extract all important sections
+    from the resume.
+    """
+
+    sections = {
+
+        "skills": extract_section(
+            text,
+            [
+                "technical skills",
+                "skills",
+                "core skills",
+                "professional skills"
+            ]
+        ),
+
+        "projects": extract_section(
+            text,
+            [
+                "projects",
+                "project"
+            ]
+        ),
+
+        "education": extract_section(
+            text,
+            [
+                "education",
+                "academic",
+                "qualification"
+            ]
+        ),
+
+        "experience": extract_section(
+            text,
+            [
+                "experience",
+                "work experience",
+                "professional experience"
+            ]
+        ),
+
+        "summary": extract_section(
+            text,
+            [
+                "summary",
+                "professional summary",
+                "profile"
+            ]
+        )
+    }
+
     return sections
 
 
+# ==========================================================
+# EXTRACT IMPORTANT KEYWORDS
+# ==========================================================
+
+# ==========================================================
+# EXTRACT IMPORTANT KEYWORDS
+# ==========================================================
+
 def get_tokens(text):
+    """
+    Extract meaningful keywords from text.
+
+    This function:
+    1. Converts text into tokens
+    2. Removes stop words (is, the, of...)
+    3. Removes punctuation
+    4. Removes numbers
+    5. Converts words to their base form (lemma)
+
+    Example
+    -------
+    Input:
+        "Developed REST APIs using Java and Spring Boot"
+
+    Output:
+        {
+            "develop",
+            "rest",
+            "api",
+            "java",
+            "spring",
+            "boot"
+        }
+    """
+
+    # Convert text into spaCy document
     doc = nlp(text)
-    return set([token.lemma_ for token in doc if not token.is_stop and not token.is_punct])
+
+    # Store unique keywords
+    keywords = set()
+
+    # Visit every word
+    for token in doc:
+
+        # Ignore numbers
+        if not token.is_alpha:
+            continue
+
+        # Ignore common words
+        if token.is_stop:
+            continue
+
+        # Convert to base form
+        keyword = token.lemma_.lower()
+
+        # Store keyword
+        keywords.add(keyword)
+
+    return keywords
 
 
-def match_keywords(tokens, text):
-    matched = [t for t in tokens if t in text]
-    unmatched = [t for t in tokens if t not in text]
-    return matched, unmatched
 
 
-def score_sections(sections, jd_tokens):
-    result = {}
-    for section_name, section_text in sections.items():
-        matched = [t for t in jd_tokens if t in section_text]
-        total = len(jd_tokens)
-        result[section_name + "_score"] = round((len(matched) / total * 100), 2) if total > 0 else 0
-    return result
-
-def generate_tips(unmatched_keywords):
-    tech_skills = ["python", "java", "flask", "sql", "django", "react", "node", "javascript", "typescript", "docker", "kubernetes", "aws", "git", "mongodb", "postgresql", "redis", "linux", "rest", "api", "machine learning", "deep learning", "pytorch", "tensorflow", "pandas", "numpy", "scikit", "html", "css", "c++", "c", "golang", "rust", "spring", "mysql"]
-
-    soft_skills = ["expert", "solving", "problem", "analytical", "communication", "leadership", "teamwork", "management", "critical", "creative"]
-
-    result= []
-    for keyword in unmatched_keywords:
-        if keyword in tech_skills:
-            tip = f"Add '{keyword}' to your Technical Skills section"
-        elif keyword in soft_skills:
-            tip = f"Highlight '{keyword}' skills in your Professional Summary section"
-        else:
-            tip = f"Consider adding '{keyword}' experience to strengthen your resume"    
-
-        result.append(tip)    
-
-    return result    
-
-def generate_feedback(score):
-
-    tips = []
-    if score >= 80:
-        tips.append( "Great match! Your resume is well-suited for this role.✅")
-    elif score <= 79 and score >= 50:
-        tips.append("Good match! Consider adding some missing keywords.⚠️ ")
-    else:
-        tips.append("Your resume needs significant improvement for this role.❌ ")
-
-    return tips        
-
-
-# ── Routes ───────────────────────────────────────────────
-@app.route("/")
-def home():
-    return render_template("index.html")
-
-
-@app.route("/upload", methods=["GET", "POST"])
-def upload():
-    if request.method == "GET":
-        return redirect(url_for("home"))
-
-    jd_text = request.form.get("job_description", "").lower()
-    file = request.files.get("file")
-
-    if not jd_text:
-        return jsonify({"error": "Job description is empty"}), 400
-    if not file or file.filename == "":
-        return jsonify({"error": "No file uploaded"}), 400
-
-    text = extract_text_from_pdf(file)
-    sections = extract_sections(text)
-    jd_tokens = get_tokens(jd_text)
-
-    matched, unmatched = match_keywords(jd_tokens, text)
-    total = len(matched) + len(unmatched)
-    score = round((len(matched) / total * 100), 2) if total > 0 else 0
-
-    feedback = generate_feedback(score)
-
-    section_scores = score_sections(sections, jd_tokens)
-    unmatched_word_tips = generate_tips(unmatched)
-
-    supabase.table("ats_results").insert({
-        "job_description": jd_text,
-        "score": score,
-        "matched_keywords": matched,
-        "missing_keywords": unmatched,
-        "filename": file.filename
-
-    }).execute()
-
-    return jsonify({
-        "Score": score,
-        "KeyWord_exists": matched,
-        "KeyWord_not_exist": unmatched,
-        "section_scores": section_scores,
-        "Unmatched_keyword_tips" : unmatched_word_tips,
-        "Feedback" : feedback
-    })
-
-
-@app.route("/history", methods=["GET"])
-def history():
-    result = supabase.table("ats_results").select("*").execute()
-    for row in result.data:
-        dt = datetime.fromisoformat(row['created_at'])
-        row['created_at'] = dt.strftime("%d %b %Y, %I:%M %p")
-    return render_template("history.html", results=result.data)
-
-@app.route("/delete/<int:id>")
-def delete(id):
-    result = supabase.table("ats_results").delete().eq("id",id).execute()
-    flash("Entry deleted successfully!")
-    return  redirect(url_for('history'))
-
-
-# ── Run ──────────────────────────────────────────────────
-if __name__ == "__main__":
-    app.run(host="127.0.0.1", port=5000, debug=True)
