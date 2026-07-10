@@ -271,6 +271,36 @@ def get_tokens(text):
 
     return keywords
 
+# ==========================================================
+# MATCH JD KEYWORDS WITH RESUME
+# ==========================================================
 
+def match_keywords(jd_keywords, resume_text):
+    """
+    Compare Job Description keywords
+    with Resume.
 
+    Returns:
+        matched_keywords
+        missing_keywords
+    """
+
+    matched_keywords = []
+    missing_keywords = []
+
+    # Check every JD keyword
+    for keyword in jd_keywords:
+
+        # Match whole word only
+        pattern = rf"\b{re.escape(keyword)}\b"
+
+        if re.search(pattern, resume_text):
+
+            matched_keywords.append(keyword)
+
+        else:
+
+            missing_keywords.append(keyword)
+
+    return matched_keywords, missing_keywords
 
