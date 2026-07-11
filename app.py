@@ -53,10 +53,7 @@ app.secret_key = os.getenv("SECRET_KEY")
 SUPABASE_URL = os.getenv("SUPABASE_URL")
 SUPABASE_KEY = os.getenv("SUPABASE_KEY")
 
-supabase = create_client(
-    SUPABASE_URL,
-    SUPABASE_KEY
-)
+supabase = create_client(SUPABASE_URL,SUPABASE_KEY)
 
 # ==========================================================
 # ATS SCORE WEIGHTS
@@ -92,20 +89,13 @@ def extract_text_from_pdf(file) -> str:
     # Read every page
 
     for page in reader.pages:
-
         try:
-
             page_text = page.extract_text()
-
             # Some pages may return None
             if page_text:
-
                 complete_text += page_text + " "
-
         except Exception:
-
             continue
-
     return complete_text.lower()
 
 
@@ -113,7 +103,7 @@ def extract_text_from_pdf(file) -> str:
 # RESUME SECTION EXTRACTOR
 # ==========================================================
 
-def extract_section(text, headings):
+def extract_section(text: str, headings: list) -> str:
     """
     Extract a particular section
     like Skills, Projects, Education etc.
@@ -146,11 +136,7 @@ def extract_section(text, headings):
         rf"$)\b)"
     )
 
-    match = re.search(
-        regex,
-        text,
-        re.IGNORECASE | re.DOTALL
-    )
+    match = re.search(regex,text,re.IGNORECASE | re.DOTALL)
 
     if match:
         return match.group(1).strip()
@@ -162,7 +148,7 @@ def extract_section(text, headings):
 # EXTRACT ALL SECTIONS
 # ==========================================================
 
-def extract_resume_sections(text) :
+def extract_resume_sections(text: str) -> dict:
     """
     Extract all important sections
     from the resume.
@@ -266,9 +252,7 @@ def extract_skills(text : str, known_skills : list) -> set:
     found_skills = set()
 
     for skill in known_skills:
-
         pattern = rf"\b{re.escape(skill.lower())}\b"
-
         if re.search(pattern, text):
             found_skills.add(skill)
 
@@ -294,9 +278,7 @@ def match_skills(resume_skills: set,jd_skills: set) -> tuple:
     """
 
     matched_skills = resume_skills & jd_skills
-
     missing_skills = jd_skills - resume_skills
-
     return matched_skills, missing_skills
 
 # ==========================================================
@@ -318,13 +300,11 @@ def extract_contact_details(text: str) -> dict:
     """
 
     contacts = {
-
         "email": None,
         "phone": None,
         "linkedin": None,
         "github": None,
         "portfolio": None
-
     }
 
     # -------------------------
@@ -369,12 +349,7 @@ def extract_contact_details(text: str) -> dict:
     urls = re.findall(r"https?://[^\s]+", text)
 
     for url in urls:
-
-        if (
-            "linkedin.com" not in url
-            and
-            "github.com" not in url
-        ):
+        if ("linkedin.com" not in url and "github.com" not in url):
             contacts["portfolio"] = url
             break
 
@@ -400,7 +375,6 @@ def calculate_skill_score(matched_skills : set,jd_skills : set) -> float:
     if not jd_skills:
         return 0
     
-
     score = (len(matched_skills) / len(jd_skills) ) * 100
     return round(score,2)
 
@@ -427,7 +401,6 @@ def calculate_section_score(sections : dict) -> float:
 
     # Check every section
     for section in sections.values():
-
         if section.strip():
             available_sections += 1
 
@@ -450,16 +423,10 @@ def calculate_contact_score(contact_details: dict) -> float:
     available_contact_details = 0
 
     for contact in contact_details.values():
-
         if contact:
             available_contact_details += 1
 
-    score = (
-        available_contact_details
-        /
-        total_contact_details
-    ) * 100
-
+    score = (available_contact_details/total_contact_details) * 100
     return round(score, 2)
 
 # ==========================================================
@@ -478,33 +445,22 @@ def calculate_completeness_score(sections: dict,contact_details: dict) -> float:
 
     # Count available sections
     for section in sections.values():
-
         if section.strip():
             available_items += 1
 
     # Count available contacts
     for contact in contact_details.values():
-
         if contact:
             available_items += 1
 
-    score = (
-        available_items
-        /
-        total_items
-    ) * 100
-
+    score = (available_items /total_items) * 100
     return round(score, 2)
 
 # ==========================================================
 # CALCULATE RESUME SCORE (WITHOUT JOB DESCRIPTION)
 # ==========================================================
 
-def calculate_resume_score(
-    section_score: float,
-    contact_score: float,
-    completeness_score: float
-) -> float:
+def calculate_resume_score(section_score: float,contact_score: float,completeness_score: float) -> float:
     """
     Calculate resume score when
     no Job Description is provided.
@@ -516,15 +472,7 @@ def calculate_resume_score(
     Completeness Score  : 30%
     """
 
-    final_score = (
-
-        section_score * 50 +
-
-        contact_score * 20 +
-
-        completeness_score * 30
-
-    ) / 100
+    final_score = (section_score * 50 +contact_score * 20 +completeness_score * 30) / 100
 
     return round(final_score, 2)
 
@@ -541,11 +489,6 @@ def calculate_ats_score(skill_score: float,section_score: float,contact_score: f
     final_score = (skill_score * SKILL_WEIGHT +section_score * SECTION_WEIGHT +contact_score * CONTACT_WEIGHT +completeness_score * COMPLETENESS_WEIGHT) / 100
 
     return round(final_score, 2)
-
-
-# ==========================================================
-# GENERATE SCORE FEEDBACK
-# ==========================================================
 
 # ==========================================================
 # GENERATE SCORE FEEDBACK
@@ -576,83 +519,48 @@ def generate_score_feedback(score: float, mode: str) -> list:
         title = "ATS"
 
     if score >= 90:
-
-        feedback.append(
-            f"Excellent {title} score!"
-        )
+        feedback.append(f"Excellent {title} score!")
 
         if mode == "job_match":
-            feedback.append(
-                "Your resume is highly optimized for this job description."
-            )
+            feedback.append("Your resume is highly optimized for this job description.")
         else:
-            feedback.append(
-                "Your resume follows most ATS best practices."
-            )
+            feedback.append("Your resume follows most ATS best practices.")
 
     elif score >= 75:
-
-        feedback.append(
-            f"Very good {title} score."
-        )
+        feedback.append(f"Very good {title} score.")
 
         if mode == "job_match":
-            feedback.append(
-                "Your resume has a strong match with the job description."
-            )
+            feedback.append("Your resume has a strong match with the job description.")
         else:
-            feedback.append(
-                "Your resume is well structured and ATS-friendly."
-            )
+            feedback.append("Your resume is well structured and ATS-friendly.")
 
     elif score >= 60:
-
-        feedback.append(
-            f"Good {title} score."
-        )
+        feedback.append(f"Good {title} score.")
 
         if mode == "job_match":
-            feedback.append(
-                "Adding the missing skills can further improve your score."
-            )
+            feedback.append("Adding the missing skills can further improve your score.")
         else:
-            feedback.append(
-                "Improving resume sections and contact details can increase your score."
-            )
+            feedback.append("Improving resume sections and contact details can increase your score.")
 
     elif score >= 40:
 
-        feedback.append(
-            f"Average {title} score."
-        )
+        feedback.append(f"Average {title} score.")
 
         if mode == "job_match":
-            feedback.append(
-                "Your resume needs better alignment with the job description."
-            )
+            feedback.append("Your resume needs better alignment with the job description.")
         else:
-            feedback.append(
-                "Your resume needs improvements to become more ATS-friendly."
-            )
+            feedback.append("Your resume needs improvements to become more ATS-friendly.")
 
     else:
 
-        feedback.append(
-            f"Low {title} score."
-        )
+        feedback.append(f"Low {title} score.")
 
         if mode == "job_match":
-            feedback.append(
-                "Your resume does not match the job description well."
-            )
+            feedback.append("Your resume does not match the job description well.")
         else:
-            feedback.append(
-                "Your resume is missing several important ATS sections."
-            )
+            feedback.append("Your resume is missing several important ATS sections.")
 
-        feedback.append(
-            "Consider adding more relevant skills, projects, and professional information."
-        )
+        feedback.append("Consider adding more relevant skills, projects, and professional information.")
 
     return feedback
 
@@ -671,25 +579,18 @@ def generate_skill_feedback(matched_skills: set,missing_skills: set) -> list:
     feedback = []
 
     # Tell user how many skills matched
-    feedback.append(
-        f"You matched {len(matched_skills)} required skill(s)."
-    )
+    feedback.append(f"You matched {len(matched_skills)} required skill(s).")
 
     # If no skills are missing
     if not missing_skills:
 
-        feedback.append(
-            "Excellent! You matched all the required technical skills."
-        )
-
+        feedback.append("Excellent! You matched all the required technical skills.")
         return feedback
 
     # Suggestions for missing skills
     for skill in sorted(missing_skills):
 
-        feedback.append(
-            f"Consider adding '{skill}' if you have experience with it."
-        )
+        feedback.append(f"Consider adding '{skill}' if you have experience with it.")
 
     return feedback
 
@@ -745,9 +646,7 @@ def generate_resume_feedback(sections: dict,contact_details: dict) -> list:
 
     # If everything is present
     if not feedback:
-        feedback.append(
-            "Excellent! Your resume has all the important sections and contact details."
-        )
+        feedback.append("Excellent! Your resume has all the important sections and contact details.")
 
     return feedback
 
@@ -768,30 +667,16 @@ def generate_feedback(score: float,matched_skills: set,missing_skills: set,secti
     feedback = []
 
     # Overall ATS Score Feedback
-    feedback.extend(
-        generate_score_feedback(score,"job_match")
-    )
+    feedback.extend( generate_score_feedback(score,"job_match"))
 
     # Skill Feedback
-    feedback.extend(
-        generate_skill_feedback(
-            matched_skills,
-            missing_skills
-        )
-    )
+    feedback.extend(generate_skill_feedback( matched_skills,missing_skills))
 
     # Resume Feedback
-    feedback.extend(
-        generate_resume_feedback(
-            sections,
-            contact_details
-        )
-    )
+    feedback.extend(generate_resume_feedback(sections,contact_details))
 
     if not feedback:
-        feedback.append(
-            "Excellent! No improvements required."
-        )
+        feedback.append("Excellent! No improvements required.")
 
     return feedback
 
@@ -810,7 +695,6 @@ def upload_resume():
     job_description = request.form.get("job_description","").strip().lower()
 
     if not file:
-
         return jsonify({
             "error": "Please upload a resume."
         }),400
@@ -828,19 +712,13 @@ def upload_resume():
     if not known_skills:
 
         return jsonify({
-
             "error":"Skills database could not be loaded."
-
         }),500
     
     resume_skills = extract_skills(resume_text,known_skills)
-
     contact_details = extract_contact_details(resume_text)
-
     section_score = calculate_section_score(sections)
-
     contact_score = calculate_contact_score(contact_details)
-
     completeness_score = calculate_completeness_score(sections,contact_details)
 
 
@@ -852,36 +730,27 @@ def upload_resume():
 
         jd_skills = extract_skills(job_description, known_skills)
 
+        if not jd_skills:
+            return jsonify({
+                "error": "No recognizable technical skills found in the job description."
+            }), 400
+        
         matched_skills, missing_skills = match_skills(resume_skills,jd_skills)
-
         skill_score = calculate_skill_score(matched_skills,jd_skills)
-
         ats_score = calculate_ats_score(skill_score,section_score,contact_score,completeness_score)
-
         feedback = generate_feedback(ats_score,matched_skills, missing_skills, sections,contact_details)
 
         return jsonify({
-
             "mode": "job_match",
-
             "score": ats_score,
-
             "skill_score": skill_score,
-
             "section_score": section_score,
-
             "contact_score": contact_score,
-
             "completeness_score": completeness_score,
-
             "matched_skills": sorted(matched_skills),
-
             "missing_skills": sorted(missing_skills),
-
             "contact_details": contact_details,
-
             "feedback": feedback
-
         })
 
 
@@ -890,29 +759,17 @@ def upload_resume():
     # ======================================================
 
     resume_score = calculate_resume_score(section_score,contact_score,completeness_score)
-
     feedback = generate_score_feedback(resume_score , "resume_analysis")
-
     feedback.extend(generate_resume_feedback(sections , contact_details ))
-
     feedback.insert(0, f"Resume Score: {resume_score}%")
 
     return jsonify({
-
         "mode": "resume_analysis",
-
         "score": resume_score,
-
         "section_score": section_score,
-
         "contact_score": contact_score,
-
         "completeness_score": completeness_score,
-
         "resume_skills": sorted(resume_skills),
-
         "contact_details": contact_details,
-
         "feedback": feedback
-
     })
