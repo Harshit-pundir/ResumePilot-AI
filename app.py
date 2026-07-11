@@ -8,7 +8,7 @@
 # Import Required Libraries
 # -----------------------------
 
-from flask import Flask
+from flask import Flask , request , jsonify
 from PyPDF2 import PdfReader
 from dotenv import load_dotenv
 from supabase import create_client
@@ -366,8 +366,6 @@ def extract_contact_details(text: str) -> dict:
     # Portfolio
     # -------------------------
 
-    portfolio = re.search( r"https?://[^\s]+",text)
-
     urls = re.findall(r"https?://[^\s]+", text)
 
     for url in urls:
@@ -691,3 +689,80 @@ def generate_feedback(score: float,matched_skills: set,missing_skills: set,secti
         )
 
     return feedback
+
+
+# ==========================================================
+# UPLOAD RESUME
+# ==========================================================
+
+@app.route("/upload", methods=["POST"])
+def upload_resume():
+
+   # Resume PDF
+    file = request.files.get("resume")
+
+    # Job Description
+    job_description = request.form.get("job_description").lower()
+
+    if not file:
+
+        return jsonify({
+            "error": "Please upload a resume."
+        }),400
+
+
+    if not job_description:
+
+        return jsonify({
+            "error":"Please enter job description."
+        }),400
+    
+    resume_text = extract_text_from_pdf(file)
+    sections = extract_resume_sections(resume_text)
+    known_skills = load_skills()
+
+    if not known_skills:
+
+        return jsonify({
+
+            "error":"Skills database could not be loaded."
+
+        }),500
+    
+    resume_skills = extract_skills(resume_text,known_skills)
+    jd_skills = extract_skills(job_description,known_skills)
+
+    matched_skills , missing_skills = match_skills(resume_skills,jd_skills)
+
+    contact_details = extract_contact_details(resume_text)
+
+    skill_score = calculate_skill_score(matched_skills,jd_skills)
+    section_score = calculate_section_score(sections)
+    contact_score = calculate_contact_score(contact_details)
+    completeness_score = calculate_completeness_score(sections,contact_details)
+    ats_score = calculate_ats_score(skill_score,section_score,contact_score,completeness_score)
+
+    feedback = generate_feedback(ats_score,matched_skills,missing_skills,sections,contact_details)
+
+    return jsonify({
+
+            "ats_score": ats_score,
+
+            "skill_score": skill_score,
+
+            "section_score": section_score,
+
+            "contact_score": contact_score,
+
+            "completeness_score": completeness_score,
+
+            "matched_skills": sorted(matched_skills),
+
+            "missing_skills": sorted(missing_skills),
+
+            "contact_details": contact_details,
+
+            "feedback": feedback
+
+        })
+
