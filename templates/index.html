@@ -14,7 +14,7 @@
     <!-- Header -->
 
     <header>
-        <h1>ATS Resume Score Checker</h1>
+        <h1>AI Resume ATS Analyzer</h1>
         <p>
             Analyze your resume and improve your chances
             of getting shortlisted.
@@ -30,18 +30,18 @@
         <section class="upload-card">
             <h2>Analyze Your Resume</h2>
             <form id="resume-form">
-                <label for="resume">Upload Resume (PDF)</label>
-
-                <input type="file" id="resume" name="resume" accept=".pdf" required>
-
-                <label for="job_description">Job Description (Optional) </label>
-
-                <textarea id="job_description" name="job_description" rows="10" placeholder="Paste job description here..."></textarea>
-
-                <button type="submit">Analyze Resume</button>
-
+                <label for="resume" class="upload-box">
+                    <input type="file" id="resume" name="resume" accept=".pdf" hidden>
+                    <div class="upload-icon">📄</div>
+                    <h3>Drag & Drop Resume</h3>
+                    <p>or Browse PDF</p>
+                    <small>PDF only • Max 5 MB</small>
+                </label>
+                <label for="job_description">Job Description (Optional)</label>
+                <textarea id="job_description" name="job_description" rows="10"
+                    placeholder="Paste job description here..."></textarea>
+                <button type="submit">Analyze Resume<span>🚀</span></button>
             </form>
-
         </section>
 
         <!-- Loader -->
@@ -50,13 +50,13 @@
 
         <!-- Result -->
 
-        <section id="result" class="hidden">!-- JavaScript will generate result here --></section>
+        <section id="result" class="hidden"><!-- JavaScript will generate result here --></section>
 
     </main>
 
     <!-- Footer -->
 
-    <footer><p>Made by Harshit Pundir ❤️</p></footer>
+    <footer><p>© 2026 Harshit Pundir • ATS Resume Analyzer</p></footer> 
 
     <script src="{{ url_for('static', filename='js/script.js') }}"></script>
 
