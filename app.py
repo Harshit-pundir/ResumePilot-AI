@@ -41,7 +41,11 @@ load_dotenv()
 # convert words into their root form (lemma),
 # and process text efficiently.
 
-nlp = spacy.load("en_core_web_sm")
+try:
+    nlp = spacy.load("en_core_web_sm")
+except OSError:
+    logger.error("spaCy model 'en_core_web_sm' is not installed.")
+    raise
 
 
 # -----------------------------
@@ -117,6 +121,7 @@ def extract_text_from_pdf(file) -> str:
             if page_text:
                 complete_text += page_text + " "
         except Exception:
+            logger.exception("Error while extracting text from a PDF page.")
             continue
     return complete_text.lower()
 
@@ -125,7 +130,7 @@ def extract_text_from_pdf(file) -> str:
 # RESUME SECTION EXTRACTOR
 # ==========================================================
 
-def extract_section(text: str, headings: list) -> str:
+def extract_section(text: str, headings: list[str]) -> str:
     """
     Extract a particular section
     like Skills, Projects, Education etc.
@@ -158,7 +163,7 @@ def extract_section(text: str, headings: list) -> str:
         rf"$)\b)"
     )
 
-    match = re.search(regex,text,re.IGNORECASE | re.DOTALL)
+    match = re.search(regex, text, re.IGNORECASE | re.DOTALL)
 
     if match:
         return match.group(1).strip()
@@ -170,7 +175,7 @@ def extract_section(text: str, headings: list) -> str:
 # EXTRACT ALL SECTIONS
 # ==========================================================
 
-def extract_resume_sections(text: str) -> dict:
+def extract_resume_sections(text: str) -> dict[str, str]:
     """
     Extract all important sections
     from the resume.
@@ -259,7 +264,7 @@ def load_skills() -> list[str]:
         return []
 
 
-def extract_skills(text : str, known_skills : list) -> set:
+def extract_skills(text: str, known_skills: list[str]) -> set[str]:
     """
     Extract all predefined skills
     from given text.
@@ -287,7 +292,10 @@ def extract_skills(text : str, known_skills : list) -> set:
     return found_skills
 
 
-def match_skills(resume_skills: set,jd_skills: set) -> tuple:
+def match_skills(
+    resume_skills: set[str],
+    jd_skills: set[str]
+) -> tuple[set[str], set[str]]:
     """
     Compare resume skills with
     job description skills.
@@ -313,7 +321,7 @@ def match_skills(resume_skills: set,jd_skills: set) -> tuple:
 # EXTRACT CONTACT DETAILS
 # ==========================================================
 
-def extract_contact_details(text: str) -> dict:
+def extract_contact_details(text: str) -> dict[str, str | None]:
     """
     Extract contact details from resume.
 
@@ -339,7 +347,7 @@ def extract_contact_details(text: str) -> dict:
     # Email
     # -------------------------
 
-    email = re.search(r"[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}",text)
+    email = re.search(r"[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}", text)
     if email:
         contacts["email"] = email.group()
 
@@ -347,7 +355,7 @@ def extract_contact_details(text: str) -> dict:
     # Phone Number
     # -------------------------
 
-    phone = re.search(r"(?:\+91[\-\s]?)?[6-9]\d{9}",text)
+    phone = re.search(r"(?:\+91[\-\s]?)?[6-9]\d{9}", text)
 
     if phone:
         contacts["phone"] = phone.group()
@@ -356,7 +364,7 @@ def extract_contact_details(text: str) -> dict:
     # LinkedIn
     # -------------------------
 
-    linkedin = re.search(r"https?://(?:www\.)?linkedin\.com/[^\s]+",text)
+    linkedin = re.search(r"https?://(?:www\.)?linkedin\.com/[^\s]+", text)
 
     if linkedin:
         contacts["linkedin"] = linkedin.group()
@@ -365,7 +373,7 @@ def extract_contact_details(text: str) -> dict:
     # GitHub
     # -------------------------
 
-    github = re.search(r"https?://(?:www\.)?github\.com/[^\s]+",text)
+    github = re.search(r"https?://(?:www\.)?github\.com/[^\s]+", text)
 
     if github:
         contacts["github"] = github.group()
@@ -387,7 +395,7 @@ def extract_contact_details(text: str) -> dict:
 # CALCULATE SKILL SCORE
 # ==========================================================
 
-def calculate_skill_score(matched_skills : set,jd_skills : set) -> float:
+def calculate_skill_score(matched_skills: set[str], jd_skills: set[str]) -> float:
     """
     Calculate how many required skills
     are present in the resume.
@@ -403,14 +411,14 @@ def calculate_skill_score(matched_skills : set,jd_skills : set) -> float:
     if not jd_skills:
         return 0
     
-    score = (len(matched_skills) / len(jd_skills) ) * 100
-    return round(score,2)
+    score = (len(matched_skills) / len(jd_skills)) * PERCENT_MULTIPLIER
+    return round(score, ROUND_DECIMALS)
 
 # ==========================================================
 # CALCULATE SECTION SCORE
 # ==========================================================
 
-def calculate_section_score(sections : dict) -> float:
+def calculate_section_score(sections: dict[str, str]) -> float:
     """
     Calculate score based on
     available resume sections.
@@ -432,16 +440,16 @@ def calculate_section_score(sections : dict) -> float:
         if section.strip():
             available_sections += 1
 
-    score = (available_sections/total_sections) * 100
+    score = (available_sections / total_sections) * PERCENT_MULTIPLIER
 
-    return round(score, 2)
+    return round(score, ROUND_DECIMALS)
 
 
 # ==========================================================
 # CALCULATE CONTACT SCORE
 # ==========================================================
 
-def calculate_contact_score(contact_details: dict) -> float:
+def calculate_contact_score(contact_details: dict[str, str | None]) -> float:
     """
     Calculate score based on
     available contact information.
@@ -454,14 +462,17 @@ def calculate_contact_score(contact_details: dict) -> float:
         if contact:
             available_contact_details += 1
 
-    score = (available_contact_details/total_contact_details) * 100
-    return round(score, 2)
+    score = (available_contact_details / total_contact_details) * PERCENT_MULTIPLIER
+    return round(score, ROUND_DECIMALS)
 
 # ==========================================================
 # CALCULATE RESUME COMPLETENESS SCORE
 # ==========================================================
 
-def calculate_completeness_score(sections: dict,contact_details: dict) -> float:
+def calculate_completeness_score(
+    sections: dict[str, str],
+    contact_details: dict[str, str | None]
+) -> float:
     """
     Calculate how complete
     the resume is.
@@ -481,14 +492,18 @@ def calculate_completeness_score(sections: dict,contact_details: dict) -> float:
         if contact:
             available_items += 1
 
-    score = (available_items /total_items) * 100
-    return round(score, 2)
+    score = (available_items / total_items) * PERCENT_MULTIPLIER
+    return round(score, ROUND_DECIMALS)
 
 # ==========================================================
 # CALCULATE RESUME SCORE (WITHOUT JOB DESCRIPTION)
 # ==========================================================
 
-def calculate_resume_score(section_score: float,contact_score: float,completeness_score: float) -> float:
+def calculate_resume_score(
+    section_score: float,
+    contact_score: float,
+    completeness_score: float
+) -> float:
     """
     Calculate resume score when
     no Job Description is provided.
@@ -500,29 +515,43 @@ def calculate_resume_score(section_score: float,contact_score: float,completenes
     Completeness Score  : 30%
     """
 
-    final_score = (section_score * 50 +contact_score * 20 +completeness_score * 30) / 100
+    final_score = (
+        section_score * RESUME_SECTION_WEIGHT
+        + contact_score * RESUME_CONTACT_WEIGHT
+        + completeness_score * RESUME_COMPLETENESS_WEIGHT
+    ) / PERCENT_MULTIPLIER
 
-    return round(final_score, 2)
+    return round(final_score, ROUND_DECIMALS)
 
 # ==========================================================
 # CALCULATE FINAL ATS SCORE
 # ==========================================================
 
-def calculate_ats_score(skill_score: float,section_score: float,contact_score: float,completeness_score: float) -> float:
+def calculate_ats_score(
+    skill_score: float,
+    section_score: float,
+    contact_score: float,
+    completeness_score: float
+) -> float:
     """
     Calculate final ATS score
     using weighted scoring.
     """
 
-    final_score = (skill_score * SKILL_WEIGHT +section_score * SECTION_WEIGHT +contact_score * CONTACT_WEIGHT +completeness_score * COMPLETENESS_WEIGHT) / 100
+    final_score = (
+        skill_score * SKILL_WEIGHT
+        + section_score * SECTION_WEIGHT
+        + contact_score * CONTACT_WEIGHT
+        + completeness_score * COMPLETENESS_WEIGHT
+    ) / PERCENT_MULTIPLIER
 
-    return round(final_score, 2)
+    return round(final_score, ROUND_DECIMALS)
 
 # ==========================================================
 # GENERATE SCORE FEEDBACK
 # ==========================================================
 
-def generate_score_feedback(score: float, mode: str) -> list:
+def generate_score_feedback(score: float, mode: str) -> list[str]:
     """
     Generate feedback based on
     the final score.
@@ -546,7 +575,7 @@ def generate_score_feedback(score: float, mode: str) -> list:
     else:
         title = "ATS"
 
-    if score >= 90:
+    if score >= EXCELLENT_SCORE_THRESHOLD:
         feedback.append(f"Excellent {title} score!")
 
         if mode == "job_match":
@@ -554,7 +583,7 @@ def generate_score_feedback(score: float, mode: str) -> list:
         else:
             feedback.append("Your resume follows most ATS best practices.")
 
-    elif score >= 75:
+    elif score >= VERY_GOOD_SCORE_THRESHOLD:
         feedback.append(f"Very good {title} score.")
 
         if mode == "job_match":
@@ -562,7 +591,7 @@ def generate_score_feedback(score: float, mode: str) -> list:
         else:
             feedback.append("Your resume is well structured and ATS-friendly.")
 
-    elif score >= 60:
+    elif score >= GOOD_SCORE_THRESHOLD:
         feedback.append(f"Good {title} score.")
 
         if mode == "job_match":
@@ -570,7 +599,7 @@ def generate_score_feedback(score: float, mode: str) -> list:
         else:
             feedback.append("Improving resume sections and contact details can increase your score.")
 
-    elif score >= 40:
+    elif score >= AVERAGE_SCORE_THRESHOLD:
 
         feedback.append(f"Average {title} score.")
 
@@ -598,7 +627,10 @@ def generate_score_feedback(score: float, mode: str) -> list:
 # GENERATE SKILL FEEDBACK
 # ==========================================================
 
-def generate_skill_feedback(matched_skills: set,missing_skills: set) -> list:
+def generate_skill_feedback(
+    matched_skills: set[str],
+    missing_skills: set[str]
+) -> list[str]:
     """
     Generate feedback based on
     matched and missing skills.
@@ -626,7 +658,10 @@ def generate_skill_feedback(matched_skills: set,missing_skills: set) -> list:
 # GENERATE RESUME FEEDBACK
 # ==========================================================
 
-def generate_resume_feedback(sections: dict,contact_details: dict) -> list:
+def generate_resume_feedback(
+    sections: dict[str, str],
+    contact_details: dict[str, str | None]
+) -> list[str]:
     """
     Generate feedback based on
     resume structure and contact details.
@@ -682,7 +717,13 @@ def generate_resume_feedback(sections: dict,contact_details: dict) -> list:
 # GENERATE FINAL FEEDBACK
 # ==========================================================
 
-def generate_feedback(score: float,matched_skills: set,missing_skills: set,sections: dict,contact_details: dict) -> list:
+def generate_feedback(
+    score: float,
+    matched_skills: set[str],
+    missing_skills: set[str],
+    sections: dict[str, str],
+    contact_details: dict[str, str | None]
+) -> list[str]:
     """
     Generate complete ATS feedback.
 
@@ -695,13 +736,13 @@ def generate_feedback(score: float,matched_skills: set,missing_skills: set,secti
     feedback = []
 
     # Overall ATS Score Feedback
-    feedback.extend( generate_score_feedback(score,"job_match"))
+    feedback.extend(generate_score_feedback(score, "job_match"))
 
     # Skill Feedback
-    feedback.extend(generate_skill_feedback( matched_skills,missing_skills))
+    feedback.extend(generate_skill_feedback(matched_skills, missing_skills))
 
     # Resume Feedback
-    feedback.extend(generate_resume_feedback(sections,contact_details))
+    feedback.extend(generate_resume_feedback(sections, contact_details))
 
     if not feedback:
         feedback.append("Excellent! No improvements required.")
@@ -713,7 +754,7 @@ def generate_feedback(score: float,matched_skills: set,missing_skills: set,secti
 # ==========================================================
 
 @app.route("/")
-def home():
+def home() -> str:
     return render_template("index.html")
 
 # ==========================================================
@@ -723,20 +764,21 @@ def home():
 @app.route("/upload", methods=["POST"])
 def upload_resume():
 
-   # Resume PDF
+    # Resume PDF
     file = request.files.get("resume")
 
     # Job Description
-    job_description = request.form.get("job_description","").strip().lower()
+    job_description = request.form.get("job_description", "").strip().lower()
 
     if not file:
         return jsonify({
             "error": "Please upload a resume."
-        }),400
+        }), 400
 
     try:
         resume_text = extract_text_from_pdf(file)
     except Exception:
+        logger.exception("Unable to read the uploaded PDF.")
         return jsonify({
             "error": "Unable to read the uploaded PDF."
         }), 400
@@ -747,14 +789,14 @@ def upload_resume():
     if not known_skills:
 
         return jsonify({
-            "error":"Skills database could not be loaded."
-        }),500
+            "error": "Skills database could not be loaded."
+        }), 500
     
-    resume_skills = extract_skills(resume_text,known_skills)
+    resume_skills = extract_skills(resume_text, known_skills)
     contact_details = extract_contact_details(resume_text)
     section_score = calculate_section_score(sections)
     contact_score = calculate_contact_score(contact_details)
-    completeness_score = calculate_completeness_score(sections,contact_details)
+    completeness_score = calculate_completeness_score(sections, contact_details)
 
 
     # ======================================================
@@ -770,10 +812,21 @@ def upload_resume():
                 "error": "No recognizable technical skills found in the job description."
             }), 400
         
-        matched_skills, missing_skills = match_skills(resume_skills,jd_skills)
-        skill_score = calculate_skill_score(matched_skills,jd_skills)
-        ats_score = calculate_ats_score(skill_score,section_score,contact_score,completeness_score)
-        feedback = generate_feedback(ats_score,matched_skills, missing_skills, sections,contact_details)
+        matched_skills, missing_skills = match_skills(resume_skills, jd_skills)
+        skill_score = calculate_skill_score(matched_skills, jd_skills)
+        ats_score = calculate_ats_score(
+            skill_score,
+            section_score,
+            contact_score,
+            completeness_score
+        )
+        feedback = generate_feedback(
+            ats_score,
+            matched_skills,
+            missing_skills,
+            sections,
+            contact_details
+        )
 
         return jsonify({
             "mode": "job_match",
@@ -793,9 +846,13 @@ def upload_resume():
     # MODE 2 : Resume Analysis Only
     # ======================================================
 
-    resume_score = calculate_resume_score(section_score,contact_score,completeness_score)
-    feedback = generate_score_feedback(resume_score , "resume_analysis")
-    feedback.extend(generate_resume_feedback(sections , contact_details ))
+    resume_score = calculate_resume_score(
+        section_score,
+        contact_score,
+        completeness_score
+    )
+    feedback = generate_score_feedback(resume_score, "resume_analysis")
+    feedback.extend(generate_resume_feedback(sections, contact_details))
     feedback.insert(0, f"Resume Score: {resume_score}%")
 
     return jsonify({
