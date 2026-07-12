@@ -5,61 +5,107 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>ATS Resume Score Checker</title>
-
     <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
 </head>
 
 <body>
-
-    <!-- Header -->
-
-    <header>
-        <h1>AI Resume ATS Analyzer</h1>
-        <p>
-            Analyze your resume with AI-powered ATS scoring,
-            identify missing skills, and improve your interview chances.
-        </p>
-    </header>
-
-    <!-- Main -->
+    <nav class="site-nav" aria-label="Main navigation">
+        <a class="brand" href="/" aria-label="ATS Resume Analyzer home">
+            <span class="brand-mark">A</span>
+            <span>ATS Analyzer</span>
+        </a>
+        <div class="nav-links">
+            <a href="#checker">Resume</a>
+            <a href="#result">Score</a>
+            <a href="#job_description">Job Match</a>
+        </div>
+        <a class="nav-action" href="#checker">My Documents</a>
+    </nav>
 
     <main>
+        <section class="hero" id="checker">
+            <div class="hero-copy">
+                <p class="eyebrow">Resume Checker</p>
+                <h1>Is your resume good enough?</h1>
+                <p class="hero-text">
+                    Get an AI-powered ATS score, identify missing skills, and see practical fixes that can improve your
+                    chances of landing interviews.
+                </p>
 
-        <!-- Upload Card -->
+                <form id="resume-form" class="upload-panel">
+                    <label for="resume" class="upload-box" id="upload-box">
+                        <input type="file" id="resume" name="resume" accept=".pdf" hidden>
+                        <span class="upload-icon" aria-hidden="true">PDF</span>
+                        <strong>Drop your resume here or choose a file.</strong>
+                        <small id="file-help">PDF only. Max 5MB file size.</small>
+                    </label>
 
-        <section class="upload-card">
-            <h2>Analyze Your Resume</h2>
-            <form id="resume-form">
-                <label for="resume" class="upload-box">
-                    <input type="file" id="resume" name="resume" accept=".pdf" hidden>
-                    <div class="upload-icon">📄</div>
-                    <h3>Drag & Drop Resume</h3>
-                    <p>or <span>Browse Resume</span></p>
-                    <small>PDF only • Max 5 MB</small>
-                </label>
-                <label for="job_description">Job Description (Optional)</label>
-                <textarea id="job_description" name="job_description" rows="10"
-                    placeholder="Paste job description here..."></textarea>
-                <button type="submit">Analyze Resume<span></span>→</button>
-            </form>
+                    <label class="field-label" for="job_description">Job description <span>(optional)</span></label>
+                    <textarea id="job_description" name="job_description" rows="6"
+                        placeholder="Paste a job description to check keyword match..."></textarea>
+
+                    <button type="submit" id="submit-btn">Check Your Score</button>
+                    <p class="privacy-note">Privacy guaranteed. Your resume is only used for this analysis.</p>
+                </form>
+            </div>
+
+            <div class="hero-visual" aria-label="Resume score preview">
+                <div class="mock-browser">
+                    <div class="mock-topbar">
+                        <span></span>
+                        <span></span>
+                        <span></span>
+                    </div>
+                    <div class="score-dashboard">
+                        <aside class="score-sidebar">
+                            <div class="mini-logo">ATS</div>
+                            <div class="gauge">
+                                <span>82</span>
+                                <small>Good</small>
+                            </div>
+                            <ul>
+                                <li class="ok">Contact Info</li>
+                                <li class="warn">Summary</li>
+                                <li class="ok">Skills</li>
+                                <li class="bad">Work History</li>
+                            </ul>
+                        </aside>
+                        <section class="resume-preview">
+                            <div class="preview-heading">
+                                <span>Content</span>
+                                <strong>ATS Parse Rate</strong>
+                            </div>
+                            <div class="line wide"></div>
+                            <div class="line medium"></div>
+                            <div class="line"></div>
+                            <div class="score-meter">
+                                <span style="width: 78%"></span>
+                                <b></b>
+                            </div>
+                            <div class="recommendation-card">
+                                <strong>Top recommendations</strong>
+                                <p>Quantify achievements, add missing keywords, and keep section titles simple.</p>
+                            </div>
+                        </section>
+                    </div>
+                </div>
+            </div>
         </section>
 
-        <!-- Loader -->
+        <section id="loader" class="status-card hidden">
+            <div class="spinner"></div>
+            <h2>Analyzing your resume...</h2>
+            <p>Checking structure, contact details, sections, and keyword fit.</p>
+        </section>
 
-        <section id="loader" class="hidden"><h2>Analyzing Resume...</h2></section>
-
-        <!-- Result -->
-
-        <section id="result" class="hidden"><!-- JavaScript will generate result here --></section>
-
+        <section id="result" class="result-section hidden" aria-live="polite"></section>
     </main>
 
-    <!-- Footer -->
-
-    <footer><p>© 2026 Harshit Pundir • ATS Resume Analyzer</p></footer> 
+    <footer>
+        <p>© 2026 Harshit Pundir · ATS Resume Analyzer</p>
+    </footer>
 
     <script src="{{ url_for('static', filename='js/script.js') }}"></script>
-
 </body>
 
 </html>
