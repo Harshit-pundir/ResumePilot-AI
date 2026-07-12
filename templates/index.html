@@ -1,29 +1,85 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ATS Resume Checker</title>
+    <title>ATS Resume Score Checker</title>
+
     <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
 </head>
+
 <body>
 
-    <h1>ATS Resume Checker</h1>
+    <!-- Header -->
 
-    <form action="">
-        <label for="resume">Upload your resume</label><br>
-        <input type="file" id="fname" name="fname"><br>
-        <label for="jd">Job Description (type or drag & drop .txt file)</label>
-        <textarea id="job_description" name="job_description" rows="5" cols="50"></textarea>
+    <header>
+        <h1>ATS Resume Score Checker</h1>
+        <p>
+            Analyze your resume and improve your chances
+            of getting shortlisted.
+        </p>
+    </header>
 
-        <input type="submit" value="Submit">
-    </form>
+    <!-- Main -->
 
-    <div id="result"></div>
+    <main>
 
-    <button type="button" onclick="window.location.href='/history'">View History</button>
+        <!-- Upload Card -->
+
+        <section class="upload-card">
+
+            <form id="resume-form">
+
+                <label for="resume">Upload Resume (PDF)</label>
+
+                <input
+                    type="file"
+                    id="resume"
+                    name="resume"
+                    accept=".pdf"
+                    required>
+
+                <label for="job_description">
+                    Job Description (Optional)
+                </label>
+
+                <textarea
+                    id="job_description"
+                    name="job_description"
+                    rows="10"
+                    placeholder="Paste job description here..."></textarea>
+
+                <button type="submit">
+                    Analyze Resume
+                </button>
+
+            </form>
+
+        </section>
+
+        <!-- Loader -->
+
+        <section id="loader" class="hidden">
+            <h2>Analyzing Resume...</h2>
+        </section>
+
+        <!-- Result -->
+
+        <section id="result" class="hidden">
+            <!-- JavaScript will generate result here -->
+        </section>
+
+    </main>
+
+    <!-- Footer -->
+
+    <footer>
+        <p>Made by Harshit Pundir ❤️</p>
+    </footer>
 
     <script src="{{ url_for('static', filename='js/script.js') }}"></script>
 
 </body>
+
 </html>
