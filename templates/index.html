@@ -28,31 +28,16 @@
         <!-- Upload Card -->
 
         <section class="upload-card">
-
             <form id="resume-form">
-
                 <label for="resume">Upload Resume (PDF)</label>
 
-                <input
-                    type="file"
-                    id="resume"
-                    name="resume"
-                    accept=".pdf"
-                    required>
+                <input type="file" id="resume" name="resume" accept=".pdf" required>
 
-                <label for="job_description">
-                    Job Description (Optional)
-                </label>
+                <label for="job_description">Job Description (Optional) </label>
 
-                <textarea
-                    id="job_description"
-                    name="job_description"
-                    rows="10"
-                    placeholder="Paste job description here..."></textarea>
+                <textarea id="job_description" name="job_description" rows="10" placeholder="Paste job description here..."></textarea>
 
-                <button type="submit">
-                    Analyze Resume
-                </button>
+                <button type="submit">Analyze Resume</button>
 
             </form>
 
@@ -60,23 +45,17 @@
 
         <!-- Loader -->
 
-        <section id="loader" class="hidden">
-            <h2>Analyzing Resume...</h2>
-        </section>
+        <section id="loader" class="hidden"><h2>Analyzing Resume...</h2></section>
 
         <!-- Result -->
 
-        <section id="result" class="hidden">
-            <!-- JavaScript will generate result here -->
-        </section>
+        <section id="result" class="hidden">!-- JavaScript will generate result here --></section>
 
     </main>
 
     <!-- Footer -->
 
-    <footer>
-        <p>Made by Harshit Pundir ❤️</p>
-    </footer>
+    <footer><p>Made by Harshit Pundir ❤️</p></footer>
 
     <script src="{{ url_for('static', filename='js/script.js') }}"></script>
 
