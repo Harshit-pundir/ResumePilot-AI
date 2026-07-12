@@ -87,10 +87,6 @@ form{
     gap:18px;
 }
 
-label{
-    font-weight:600;
-}
-
 input,
 textarea{
     width:100%;
@@ -101,9 +97,6 @@ textarea{
     font-size:15px;
 }
 
-textarea{
-    resize:vertical;
-}
 
 button{
     background:var(--primary);
@@ -115,6 +108,7 @@ button{
     font-size:16px;
     font-weight:600;
     transition:.3s;
+    margin-top:10px;
 }
 
 button:hover{
@@ -156,18 +150,6 @@ label{
     margin-bottom:6px;
 }
 
-input[type="file"]{
-    padding:12px;
-    border:2px dashed var(--primary);
-    background:#f1f5f9;
-    cursor:pointer;
-    transition:.3s;
-}
-
-input[type="file"]:hover{
-    background:#e0f2fe;
-}
-
 textarea{
     min-height:180px;
     resize:vertical;
@@ -177,8 +159,4 @@ textarea:focus,
 input:focus{
     border-color:var(--primary);
     box-shadow:0 0 0 4px rgba(37,99,235,.15);
-}
-
-button{
-    margin-top:10px;
 }
