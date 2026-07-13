@@ -292,10 +292,7 @@ def extract_skills(text: str, known_skills: list[str]) -> set[str]:
     return found_skills
 
 
-def match_skills(
-    resume_skills: set[str],
-    jd_skills: set[str]
-) -> tuple[set[str], set[str]]:
+def match_skills(resume_skills: set[str],jd_skills: set[str]) -> tuple[set[str], set[str]]:
     """
     Compare resume skills with
     job description skills.
@@ -469,10 +466,7 @@ def calculate_contact_score(contact_details: dict[str, str | None]) -> float:
 # CALCULATE RESUME COMPLETENESS SCORE
 # ==========================================================
 
-def calculate_completeness_score(
-    sections: dict[str, str],
-    contact_details: dict[str, str | None]
-) -> float:
+def calculate_completeness_score(sections: dict[str, str],contact_details: dict[str, str | None]) -> float:
     """
     Calculate how complete
     the resume is.
@@ -499,11 +493,7 @@ def calculate_completeness_score(
 # CALCULATE RESUME SCORE (WITHOUT JOB DESCRIPTION)
 # ==========================================================
 
-def calculate_resume_score(
-    section_score: float,
-    contact_score: float,
-    completeness_score: float
-) -> float:
+def calculate_resume_score(section_score: float,contact_score: float,completeness_score: float) -> float:
     """
     Calculate resume score when
     no Job Description is provided.
@@ -527,12 +517,7 @@ def calculate_resume_score(
 # CALCULATE FINAL ATS SCORE
 # ==========================================================
 
-def calculate_ats_score(
-    skill_score: float,
-    section_score: float,
-    contact_score: float,
-    completeness_score: float
-) -> float:
+def calculate_ats_score(skill_score: float,section_score: float, contact_score: float, completeness_score: float) -> float:
     """
     Calculate final ATS score
     using weighted scoring.
@@ -627,10 +612,7 @@ def generate_score_feedback(score: float, mode: str) -> list[str]:
 # GENERATE SKILL FEEDBACK
 # ==========================================================
 
-def generate_skill_feedback(
-    matched_skills: set[str],
-    missing_skills: set[str]
-) -> list[str]:
+def generate_skill_feedback(matched_skills: set[str],missing_skills: set[str]) -> list[str]:
     """
     Generate feedback based on
     matched and missing skills.
@@ -658,10 +640,7 @@ def generate_skill_feedback(
 # GENERATE RESUME FEEDBACK
 # ==========================================================
 
-def generate_resume_feedback(
-    sections: dict[str, str],
-    contact_details: dict[str, str | None]
-) -> list[str]:
+def generate_resume_feedback(sections: dict[str, str],contact_details: dict[str, str | None]) -> list[str]:
     """
     Generate feedback based on
     resume structure and contact details.
@@ -717,13 +696,8 @@ def generate_resume_feedback(
 # GENERATE FINAL FEEDBACK
 # ==========================================================
 
-def generate_feedback(
-    score: float,
-    matched_skills: set[str],
-    missing_skills: set[str],
-    sections: dict[str, str],
-    contact_details: dict[str, str | None]
-) -> list[str]:
+def generate_feedback(score: float,matched_skills: set[str], missing_skills: set[str], sections: dict[str, str],
+    contact_details: dict[str, str | None]) -> list[str]:
     """
     Generate complete ATS feedback.
 
