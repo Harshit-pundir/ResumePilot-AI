@@ -120,9 +120,11 @@ def extract_text_from_pdf(file) -> str:
             # Some pages may return None
             if page_text:
                 complete_text += page_text + " "
+                
         except Exception:
             logger.exception("Error while extracting text from a PDF page.")
             continue
+
     return complete_text.lower()
 
 
@@ -134,41 +136,56 @@ def extract_section(text: str, headings: list[str]) -> str:
     """
     Extract a particular section
     like Skills, Projects, Education etc.
-
-    Parameters
-    ----------
-    text : Resume text
-
-    headings : List of possible section names
-
-    Returns
-    -------
-    Extracted section text
     """
 
-    # Escape special characters
-    pattern = "|".join(map(re.escape, headings))
+    lines = text.splitlines()
 
-    regex = (
-        rf"(?:{pattern})"
-        rf"\s*(.*?)"
-        rf"(?=\b(?:"
-        rf"education|"
-        rf"projects|"
-        rf"experience|"
-        rf"skills|"
-        rf"technical skills|"
-        rf"certifications|"
-        rf"summary|"
-        rf"$)\b)"
-    )
+    # All possible section headings
+    all_headings = {
+        "summary",
+        "professional summary",
+        "profile",
+        "technical skills",
+        "skills",
+        "core skills",
+        "professional skills",
+        "projects",
+        "project",
+        "education",
+        "academic",
+        "qualification",
+        "experience",
+        "work experience",
+        "professional experience",
+        "leadership",
+        "achievements",
+        "certifications"
+    }
 
-    match = re.search(regex, text, re.IGNORECASE | re.DOTALL)
+    start = -1
 
-    if match:
-        return match.group(1).strip()
+    # Find requested heading
+    for i, line in enumerate(lines):
+        current = line.strip().lower()
+        if current in headings:
+            start = i + 1
+            break
 
-    return ""
+    if start == -1:
+        return ""
+
+    section = []
+
+    # Read until next heading
+    for i in range(start, len(lines)):
+        current = lines[i].strip().lower()
+
+        if current in all_headings:
+            break
+
+        section.append(lines[i])
+
+    return "\n".join(section).strip()
 
 
 # ==========================================================
@@ -361,7 +378,8 @@ def extract_contact_details(text: str) -> dict[str, str | None]:
     # LinkedIn
     # -------------------------
 
-    linkedin = re.search(r"https?://(?:www\.)?linkedin\.com/[^\s]+", text)
+    linkedin = re.search(r"(?:https?://)?(?:www\.)?linkedin\.com/[^\s]+",text)
+
 
     if linkedin:
         contacts["linkedin"] = linkedin.group()
@@ -370,7 +388,7 @@ def extract_contact_details(text: str) -> dict[str, str | None]:
     # GitHub
     # -------------------------
 
-    github = re.search(r"https?://(?:www\.)?github\.com/[^\s]+", text)
+    github = re.search(r"(?:https?://)?(?:www\.)?github\.com/[^\s]+",text)
 
     if github:
         contacts["github"] = github.group()
@@ -651,6 +669,7 @@ def generate_resume_feedback(sections: dict[str, str],contact_details: dict[str,
     # -------------------------
     # Resume Sections
     # -------------------------
+    
 
     if not sections["summary"].strip():
         feedback.append("Add a professional summary.")
