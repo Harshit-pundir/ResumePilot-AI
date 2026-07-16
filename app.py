@@ -820,6 +820,18 @@ def upload_resume():
             sections,
             contact_details
         )
+        try:
+            supabase.table("resume_history").insert({
+                "resume_name": file.filename,
+                "mode": "job_match",
+                "score": ats_score,
+                "section_score": section_score,
+                "contact_score": contact_score,
+                "completeness_score": completeness_score
+            }).execute()
+
+        except Exception:
+            logger.exception("Failed to save analysis to Supabase.")        
 
         return jsonify({
             "mode": "job_match",
@@ -848,6 +860,19 @@ def upload_resume():
     feedback.extend(generate_resume_feedback(sections, contact_details))
     feedback.insert(0, f"Resume Score: {resume_score}%")
 
+    try:
+        supabase.table("resume_history").insert({
+            "resume_name": file.filename,
+            "mode": "resume_analysis",
+            "score": resume_score,
+            "section_score": section_score,
+            "contact_score": contact_score,
+            "completeness_score": completeness_score
+        }).execute()
+
+    except Exception:
+        logger.exception("Failed to save analysis to Supabase.")    
+
     return jsonify({
         "mode": "resume_analysis",
         "score": resume_score,
@@ -858,6 +883,11 @@ def upload_resume():
         "contact_details": contact_details,
         "feedback": feedback
     })
+
+@app.route("/history")
+def history():
+    response = supabase.table("resume_history").select("*").order("created_at",desc=True).execute()
+    return jsonify(response.data)
 
 if __name__ == "__main__":
     app.run(debug=True)
