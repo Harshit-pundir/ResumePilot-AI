@@ -124,7 +124,8 @@ def extract_text_from_pdf(file) -> str:
         except Exception:
             logger.exception("Error while extracting text from a PDF page.")
             continue
-
+        
+    print(complete_text)
     return complete_text.lower()
 
 
@@ -133,14 +134,9 @@ def extract_text_from_pdf(file) -> str:
 # ==========================================================
 
 def extract_section(text: str, headings: list[str]) -> str:
-    """
-    Extract a particular section
-    like Skills, Projects, Education etc.
-    """
 
     lines = text.splitlines()
 
-    # All possible section headings
     all_headings = {
         "summary",
         "professional summary",
@@ -162,12 +158,22 @@ def extract_section(text: str, headings: list[str]) -> str:
         "certifications"
     }
 
+    normalized_headings = {
+        re.sub(r"[^a-z]", "", h.lower())
+        for h in headings
+    }
+
+    normalized_all_headings = {
+        re.sub(r"[^a-z]", "", h.lower())
+        for h in all_headings
+    }
+
     start = -1
 
-    # Find requested heading
     for i, line in enumerate(lines):
-        current = line.strip().lower()
-        if current in headings:
+        current = re.sub(r"[^a-z]", "", line.strip().lower())
+
+        if current in normalized_headings:
             start = i + 1
             break
 
@@ -176,11 +182,10 @@ def extract_section(text: str, headings: list[str]) -> str:
 
     section = []
 
-    # Read until next heading
     for i in range(start, len(lines)):
-        current = lines[i].strip().lower()
+        current = re.sub(r"[^a-z]", "", lines[i].strip().lower())
 
-        if current in all_headings:
+        if current in normalized_all_headings:
             break
 
         section.append(lines[i])
