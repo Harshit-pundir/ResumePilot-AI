@@ -36,6 +36,15 @@ Whether you're applying for internships or full-time software engineering roles,
 
 ---
 
+# 🌟 Project Highlights
+
+- 📄 PDF Resume Parsing with PyPDF2
+- 🧠 NLP-powered Skill Extraction using spaCy
+- 🎯 ATS Resume & Job Description Matching
+- 📊 Multi-factor ATS Scoring System
+- 🗄️ Resume Analysis History with Supabase
+- ⚡ Responsive Flask Web Application
+
 # ✨ Features
 
 ## 📄 Resume Analysis
@@ -43,9 +52,9 @@ Whether you're applying for internships or full-time software engineering roles,
 - 📑 Extract text from PDF resumes
 - 📂 Detect resume sections automatically
 - 📞 Extract contact information
-- 🛠️ Identify technical skills
-- 📊 Calculate resume completeness
-- 💡 Generate personalized improvement suggestions
+- 🛠️ Extract technical skills using NLP
+- 📊 Calculate resume completeness score
+- 💡 Generate personalized ATS recommendations
 
 ---
 
@@ -61,13 +70,23 @@ Compare your resume against any Job Description.
 
 ---
 
-## 📊 Detailed ATS Score
+## 🗄️ Analysis History
 
-The analyzer evaluates multiple aspects of your resume instead of providing just a single score.
+Every resume analysis is automatically stored in Supabase.
+
+- 📜 View previous resume analyses
+- 📊 Track ATS scores over time
+- 🕒 Analysis timestamp
+- 📁 Separate Resume Analysis & Job Match history
+- ⚡ Beautiful history dashboard
+
+---
+
+## 📊 Detailed ATS Score
 
 | Score | Description |
 |--------|-------------|
-| 🎯 ATS Score | Overall Resume Score |
+| 🎯 Overall Score | Final Resume / ATS Score |
 | 💻 Skill Match | Resume vs Job Description |
 | 📂 Section Score | Skills, Projects, Education & Experience |
 | 📞 Contact Score | Email, Phone, GitHub & LinkedIn |
@@ -78,31 +97,34 @@ The analyzer evaluates multiple aspects of your resume instead of providing just
 # 🧠 How It Works
 
 ```text
-                    Resume (PDF)
-                         │
-                         ▼
+                   Resume (PDF)
+                        │
+                        ▼
               PDF Text Extraction
-                   (PyPDF2)
-                         │
-                         ▼
+                  (PyPDF2)
+                        │
+                        ▼
                Resume Text Processing
-                         │
-      ┌──────────────────┼──────────────────┐
-      ▼                  ▼                  ▼
-Extract Sections   Extract Skills   Contact Details
-      │                  │                  │
-      └──────────────┬───┴──────────────────┘
-                     ▼
-              ATS Score Engine
-                     │
-                     ▼
-          Feedback Generation Engine
-                     │
-                     ▼
-             JSON Response (Flask)
-                     │
-                     ▼
-           Interactive Dashboard
+                        │
+        ┌───────────────┼───────────────┐
+        ▼               ▼               ▼
+ Resume Sections   Contact Details   Skill Extraction
+        │               │               │
+        └───────────────┼───────────────┘
+                        ▼
+                 ATS Scoring Engine
+                        │
+            ┌───────────┴────────────┐
+            ▼                        ▼
+     Resume Analysis           Job Match
+            │                        │
+            └───────────┬────────────┘
+                        ▼
+          Save Analysis History
+               (Supabase)
+                        │
+                        ▼
+            Interactive Dashboard
 ```
 
 ---
@@ -114,8 +136,8 @@ Extract Sections   Extract Skills   Contact Details
 | Backend | Python, Flask |
 | NLP | spaCy |
 | PDF Parsing | PyPDF2 |
-| Database | Supabase |
-| Frontend | HTML5, CSS3, JavaScript |
+| Database | Supabase (PostgreSQL) |
+| Frontend | HTML5, CSS3, Vanilla JavaScript |
 | Version Control | Git & GitHub |
 
 ---
@@ -133,11 +155,14 @@ resume-ats-analyzer/
 │
 ├── static/
 │   ├── css/
+│   │   ├── style.css
+│   │   └── history.css
 │   ├── js/
 │   └── images/
 │
 ├── templates/
-│   └── index.html
+│   ├── index.html
+│   └── history.html
 │
 └── screenshots/
 ```
@@ -195,9 +220,7 @@ Create a `.env` file in the project root.
 
 ```env
 SECRET_KEY=your_secret_key
-
 SUPABASE_URL=your_supabase_url
-
 SUPABASE_KEY=your_supabase_key
 ```
 
@@ -221,23 +244,29 @@ http://127.0.0.1:5000
 
 ## 🏠 Landing Page
 
-> *(Coming Soon)*
+![Landing Page](screenshots/landing.png)
 
 ---
 
 ## 📊 ATS Result Dashboard
 
-> *(Coming Soon)*
+![Result Dashboard](screenshots/result.png)
+
+---
+
+## 🗄️ Analysis History
+
+![History Page](screenshots/history.png)
 
 ---
 
 # 🚀 Roadmap
 
 - [ ] Download ATS Report as PDF
-- [ ] Resume Analysis History
+- [x] Resume Analysis History
 - [ ] Resume Comparison
 - [ ] AI Resume Suggestions
-- [ ] Dark Mode
+- [x] Dark Mode
 - [ ] Live Deployment
 
 ---
@@ -245,8 +274,6 @@ http://127.0.0.1:5000
 # 🤝 Contributing
 
 Contributions are welcome!
-
-If you have suggestions or improvements:
 
 1. Fork the repository
 2. Create a new branch
@@ -261,21 +288,15 @@ If you have suggestions or improvements:
 
 B.Tech CSE Student • Quantum University
 
-Passionate about Artificial Intelligence, Machine Learning, Backend Development, and building impactful software solutions.
+Passionate about Backend Development, AI/ML, and building impactful software solutions.
 
 ### 🌐 Connect with Me
 
-- **GitHub**  
-  https://github.com/Harshit-pundir
+- **GitHub** — https://github.com/Harshit-pundir
+- **LinkedIn** — https://www.linkedin.com/in/harshit-pundir-a5b112332/
+- **LeetCode** — https://leetcode.com/Harshitpundir
+- 📧 **Email** — harshitpundir36@gmail.com
 
-- **LinkedIn**  
-  https://www.linkedin.com/in/harshit-pundir-a5b112332/
-
-- **LeetCode**  
-  https://leetcode.com/Harshitpundir
-
-- 📧 **Email**  
-  harshitpundir36@gmail.com
 ---
 
 <div align="center">
@@ -283,8 +304,6 @@ Passionate about Artificial Intelligence, Machine Learning, Backend Development,
 ## ⭐ Support the Project
 
 If you found this project useful, please consider giving it a **Star ⭐** on GitHub.
-
-It motivates me to build more open-source projects.
 
 **Made with ❤️ by Harshit Pundir**
 
