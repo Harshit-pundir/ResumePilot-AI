@@ -267,7 +267,7 @@ http://127.0.0.1:5000
 - [ ] Resume Comparison
 - [ ] AI Resume Suggestions
 - [x] Dark Mode
-- [ ] Live Deployment
+- [x] Live Deployment
 
 ---
 
