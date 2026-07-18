@@ -247,8 +247,8 @@ http://127.0.0.1:5000
 
 ## 🏠 Landing Page
 
-![Landing Page](screenshots/landing.png)
-
+![Landing Page](screenshots/landing1.png)
+![Landing Page](screenshots/landing2.png)
 ---
 
 ## 📊 ATS Result Dashboard
