@@ -584,7 +584,7 @@ button:disabled {
 }
 
 .metric-card {
-    padding: 18px;
+    padding: 20px;
 }
 
 .metric-card span {
@@ -725,6 +725,7 @@ button:disabled {
     font: inherit;
     font-weight: 800;
     cursor: pointer;
+    transition: transform 160ms ease, box-shadow 160ms ease, border-color 160ms ease;
 }
 
 .report-button {
@@ -737,6 +738,16 @@ button:disabled {
     border: 1px solid var(--line);
     background: #fff;
     color: var(--navy);
+}
+
+.report-button:hover,
+.analyze-again-button:hover {
+    box-shadow: 0 6px 14px rgba(18, 42, 70, 0.1);
+    transform: translateY(-1px);
+}
+
+.analyze-again-button:hover {
+    border-color: var(--teal);
 }
 
 .empty-state {

@@ -595,9 +595,13 @@ def generate_score_feedback(score: float, mode: str) -> list[str]:
         feedback.append(f"Very good {title} score.")
 
         if mode == "job_match":
-            feedback.append("Your resume has a strong match with the job description.")
+            feedback.append(
+                "Your resume has a strong match with the job description."
+            )
         else:
-            feedback.append("Your resume is well structured and ATS-friendly.")
+            feedback.append(
+                "Your resume is well structured and ATS-friendly."
+        )
 
     elif score >= GOOD_SCORE_THRESHOLD:
         feedback.append(f"Good {title} score.")
@@ -812,19 +816,8 @@ def upload_resume():
         
         matched_skills, missing_skills = match_skills(resume_skills, jd_skills)
         skill_score = calculate_skill_score(matched_skills, jd_skills)
-        ats_score = calculate_ats_score(
-            skill_score,
-            section_score,
-            contact_score,
-            completeness_score
-        )
-        feedback = generate_feedback(
-            ats_score,
-            matched_skills,
-            missing_skills,
-            sections,
-            contact_details
-        )
+        ats_score = calculate_ats_score(skill_score, section_score, contact_score, completeness_score)
+        feedback = generate_feedback( ats_score, matched_skills, missing_skills, sections, contact_details)
         try:
             supabase.table("resume_history").insert({
                 "resume_name": file.filename,
@@ -862,9 +855,9 @@ def upload_resume():
         completeness_score
     )
 
-    overall_assessment = generate_score_feedback(resume_score,"resume_analysis")[0]
-
+    assessment = generate_score_feedback(resume_score, "resume_analysis")
     recommendations = generate_resume_feedback(sections,contact_details)
+    
     section_status = {
         "Summary": bool(sections["summary"].strip()),
         "Skills": bool(sections["skills"].strip()),
@@ -889,7 +882,7 @@ def upload_resume():
     return jsonify({
         "mode": "resume_analysis",
         "score": resume_score,
-        "overall_assessment": overall_assessment,
+        "overall_assessment": {"title": assessment[0],"message": assessment[1]},
         "recommendations": recommendations,
         "sections": section_status,
         "section_score": section_score,

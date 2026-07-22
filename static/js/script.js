@@ -129,7 +129,11 @@ const renderResult = (data) => {
     const title = data.mode === "job_match" ? "ATS Job Match Analysis" : "ATS Resume Analysis";
 
     // Use the new backend assessment field.
-    const summary = data.overall_assessment || "Your resume analysis is ready.";
+    const assessment = data.overall_assessment || {};
+
+    const assessmentTitle = assessment.title || "Resume Analysis";
+    const assessmentMessage =
+        assessment.message || "Your resume analysis is ready.";
 
     result.classList.remove("hidden");
     result.innerHTML = `
@@ -143,11 +147,13 @@ const renderResult = (data) => {
             <div>
                 <h2>${title}</h2>
                 <div class="assessment-card">
-                    <div class="assessment-heading">
+                <div class="assessment-heading">
                         <span class="assessment-status" aria-hidden="true">&#10003;</span>
                         <span>Overall Assessment</span>
                     </div>
-                    <p>${escapeHtml(summary)}</p>
+
+                    <h4>${escapeHtml(assessmentTitle)}</h4>
+                    <p>${escapeHtml(assessmentMessage)}</p>
                 </div>
             </div>
         </div>
@@ -182,9 +188,11 @@ const renderResult = (data) => {
 
     const analyzeAgainBtn = document.getElementById("analyze-again-btn");
 
-    analyzeAgainBtn.addEventListener("click", () => {
-        document.getElementById("checker").scrollIntoView({ behavior: "smooth", block: "start" });
-    });
+    if (analyzeAgainBtn) {
+        analyzeAgainBtn.addEventListener("click", () => {
+            document.getElementById("checker").scrollIntoView({ behavior: "smooth", block: "start" });
+        });
+    }
 
     result.scrollIntoView({ behavior: "smooth", block: "start" });
 };
