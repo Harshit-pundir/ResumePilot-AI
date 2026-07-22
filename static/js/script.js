@@ -41,6 +41,60 @@ const metricCard = (label, value) => {
     `;
 };
 
+// Render resume-section availability from the new `sections` response object.
+const resumeSectionsCard = (sections) => {
+    const sectionNames = ["Summary", "Skills", "Projects", "Education", "Experience"];
+
+    if (!sections || typeof sections !== "object") {
+        return "";
+    }
+
+    return `
+        <article class="feedback-card">
+            <h3>Resume Sections</h3>
+            <div class="feedback-list">
+                ${sectionNames.map((section) => {
+                    const isPresent = sections[section];
+
+                    if (isPresent === undefined) {
+                        return `<div class="empty-state">— ${section} (Not provided)</div>`;
+                    }
+
+                    return `
+                        <div style="color: ${isPresent ? "#087d75" : "#bb3d3d"};">
+                            ${isPresent ? "✓" : "✗"} ${section}
+                        </div>
+                    `;
+                }).join("")}
+            </div>
+        </article>
+    `;
+};
+
+// Replace the old ordered feedback list with recommendation cards.
+const recommendationsCard = (recommendations) => {
+    if (!recommendations.length) {
+        return `
+            <article class="feedback-card">
+                <h3>Recommendations</h3>
+                <p class="empty-state">No extra recommendations returned.</p>
+            </article>
+        `;
+    }
+
+    return `
+        <article class="feedback-card">
+            <h3>Recommendations</h3>
+            ${recommendations.map((item) => `
+                <div class="recommendation-card" style="margin-top: 10px;">
+                    <strong style="color: #087d75;">✓</strong>
+                    <span>${escapeHtml(item)}</span>
+                </div>
+            `).join("")}
+        </article>
+    `;
+};
+
 const setFileName = () => {
     const file = fileInput.files[0];
     fileHelp.textContent = file ? `${file.name} selected` : "PDF only. Max 5MB file size.";
@@ -65,11 +119,17 @@ const renderError = (message) => {
 
 const renderResult = (data) => {
     const score = Math.max(0, Math.min(100, Number(data.score || 0)));
-    const matched = data.matched_skills || data.resume_skills || [];
-    const missing = data.missing_skills || [];
-    const feedback = data.feedback || [];
+    const matched = Array.isArray(data.matched_skills)
+        ? data.matched_skills
+        : Array.isArray(data.resume_skills)
+            ? data.resume_skills
+            : [];
+    const missing = Array.isArray(data.missing_skills) ? data.missing_skills : [];
+    const recommendations = Array.isArray(data.recommendations) ? data.recommendations : [];
     const title = data.mode === "job_match" ? "ATS job match score" : "Resume score";
-    const summary = feedback[0] || "Your resume analysis is ready.";
+
+    // Use the new backend assessment field.
+    const summary = data.overall_assessment || "Your resume analysis is ready.";
 
     result.classList.remove("hidden");
     result.innerHTML = `
@@ -93,6 +153,8 @@ const renderResult = (data) => {
             ${metricCard("Completeness", data.completeness_score)}
         </div>
 
+        ${data.mode !== "job_match" ? resumeSectionsCard(data.sections) : ""}
+
         <div class="keyword-grid">
             <article class="keyword-card">
                 <h3>${data.mode === "job_match" ? "Matched skills" : "Detected skills"}</h3>
@@ -104,12 +166,7 @@ const renderResult = (data) => {
             </article>
         </div>
 
-        <article class="feedback-card">
-            <h3>Recommendations</h3>
-            <ol class="feedback-list">
-                ${feedback.slice(1).map((item) => `<li>${escapeHtml(item)}</li>`).join("") || "<li>No extra recommendations returned.</li>"}
-            </ol>
-        </article>
+        ${recommendationsCard(recommendations)}
     `;
 
     result.scrollIntoView({ behavior: "smooth", block: "start" });

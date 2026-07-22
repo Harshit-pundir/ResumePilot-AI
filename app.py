@@ -861,9 +861,17 @@ def upload_resume():
         contact_score,
         completeness_score
     )
-    feedback = generate_score_feedback(resume_score, "resume_analysis")
-    feedback.extend(generate_resume_feedback(sections, contact_details))
-    feedback.insert(0, f"Resume Score: {resume_score}%")
+
+    overall_assessment = generate_score_feedback(resume_score,"resume_analysis")[0]
+
+    recommendations = generate_resume_feedback(sections,contact_details)
+    section_status = {
+        "Summary": bool(sections["summary"].strip()),
+        "Skills": bool(sections["skills"].strip()),
+        "Projects": bool(sections["projects"].strip()),
+        "Education": bool(sections["education"].strip()),
+        "Experience": bool(sections["experience"].strip())
+    }
 
     try:
         supabase.table("resume_history").insert({
@@ -881,12 +889,14 @@ def upload_resume():
     return jsonify({
         "mode": "resume_analysis",
         "score": resume_score,
+        "overall_assessment": overall_assessment,
+        "recommendations": recommendations,
+        "sections": section_status,
         "section_score": section_score,
         "contact_score": contact_score,
         "completeness_score": completeness_score,
         "resume_skills": sorted(resume_skills),
-        "contact_details": contact_details,
-        "feedback": feedback
+        "contact_details": contact_details
     })
 
 @app.route("/history")
