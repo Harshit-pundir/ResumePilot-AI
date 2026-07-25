@@ -893,6 +893,13 @@ def upload_resume():
             "message": assessment[1]
         },
         "section_score": section_score,
+            "contact": {
+            "Email": bool(contact_details["email"]),
+            "Phone": bool(contact_details["phone"]),
+            "LinkedIn": bool(contact_details["linkedin"]),
+            "GitHub": bool(contact_details["github"]),
+            "Portfolio": bool(contact_details["portfolio"])
+        },
         "contact_score": contact_score,
         "completeness_score": completeness_score,
         "sections": section_status,
