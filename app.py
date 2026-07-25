@@ -9,6 +9,9 @@
 # -----------------------------
    
 from flask import Flask, request, jsonify, render_template
+from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+from reportlab.lib.enums import TA_CENTER
+from reportlab.lib.colors import HexColor
 from PyPDF2 import PdfReader
 from dotenv import load_dotenv
 from supabase import create_client
@@ -932,12 +935,41 @@ def history():
 
     return render_template("history.html", history=history_items)
 
+def create_pdf_styles():
+    styles = getSampleStyleSheet()
+
+    styles.add( ParagraphStyle(name="MainTitle", parent=styles["Title"], alignment=TA_CENTER, fontSize=24,
+            textColor=HexColor("#2563EB"),   # Blue
+            spaceAfter=6
+        )
+    )
+
+    styles.add(ParagraphStyle( name="SubTitle", parent=styles["Heading2"], alignment=TA_CENTER, fontSize=13,
+            textColor=HexColor("#6B7280"),   # Gray
+            spaceAfter=20
+        )
+    )
+
+    styles.add( ParagraphStyle( name="SectionHeading", parent=styles["Heading2"], fontSize=15,textColor=HexColor("#1D4ED8"),
+            spaceBefore=15,
+            spaceAfter=10
+        )
+    )
+
+    styles.add(ParagraphStyle( name="ScoreStyle", parent=styles["Title"], alignment=TA_CENTER, fontSize=34,
+            textColor=HexColor("#059669"),   # Green
+            spaceAfter=10
+        )
+    )
+
+    return styles
+
 def add_header(story, styles, report):
     # Main Title
-    story.append(Paragraph("<b>ResumePilot AI</b>", styles["Title"]))
+    story.append(Paragraph("<b>ResumePilot AI</b>", styles["MainTitle"]))
 
     # Subtitle
-    story.append(Paragraph("Professional ATS Analysis Report",styles["Heading2"]))
+    story.append(Paragraph("Professional ATS Analysis Report",styles["SubTitle"]))
 
     story.append(Spacer(1, 15))
 
@@ -954,15 +986,15 @@ def add_header(story, styles, report):
 
 def add_score_card(story, styles, report):
     # Section Heading
-    story.append(Paragraph("<b>ATS SCORE</b>", styles["Heading1"]))
+    story.append(Paragraph("<b>ATS SCORE</b>", styles["SectionHeading"]))
 
     # Score
-    story.append(Paragraph(f"<b>{report['score']}%</b>",styles["Title"]))
+    story.append(Paragraph(f"<b>{report['score']}%</b>",styles["ScoreStyle"]))
 
     story.append(Spacer(1, 10))
 
     # Assessment Title
-    story.append(Paragraph(report["overall_assessment"]["title"],styles["Heading2"]))
+    story.append(Paragraph(report["overall_assessment"]["title"],styles["SectionHeading"]))
 
     # Assessment Message
     story.append(Paragraph(report["overall_assessment"]["message"],styles["BodyText"]))
@@ -1062,7 +1094,7 @@ def download_report():
 
     buffer = BytesIO()
     doc = SimpleDocTemplate(buffer)
-    styles = getSampleStyleSheet()
+    styles = create_pdf_styles()
     story = []
 
     add_header(story, styles, latest_report)
