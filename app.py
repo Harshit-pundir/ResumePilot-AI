@@ -10,6 +10,7 @@
    
 from flask import Flask, request, jsonify, render_template
 from reportlab.platypus import Table, TableStyle
+from reportlab.graphics.shapes import Drawing, Rect, String
 from reportlab.lib import colors
 from reportlab.lib.units import inch
 from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
@@ -844,6 +845,18 @@ def upload_resume():
         except Exception:
             logger.exception("Failed to save analysis to Supabase.")        
 
+        latest_report = {
+            "mode": "job_match",
+            "resume_name": file.filename,
+            "score": ats_score,
+            "matched_skills": sorted(matched_skills),
+            "missing_skills": sorted(missing_skills),
+            "section_score": section_score,
+            "contact_score": contact_score,
+            "completeness_score": completeness_score,
+            "feedback": feedback
+        }    
+
         return jsonify({
             "mode": "job_match",
             "score": ats_score,
@@ -988,6 +1001,23 @@ def add_header(story, styles, report):
     # Space before next section
     story.append(Spacer(1, 20))
 
+def create_progress_bar(score, width=250, height=14):
+    drawing = Drawing(width, height + 15)
+
+    drawing.add(Rect(0,0,width,height,strokeColor=colors.grey , fillColor=colors.whitesmoke))
+
+    if score >= 80:
+        bar_color = colors.green
+    elif score >= 60:
+        bar_color = colors.orange
+    else:
+        bar_color = colors.red
+
+    drawing.add(Rect(0,0, width * score / 100,height,fillColor=bar_color, strokeColor=bar_color))
+
+    drawing.add(String(width + 10, 2, f"{score:.0f}%"))
+    return drawing    
+
 def add_score_card(story, styles, report):
     # Section Heading
     story.append(Paragraph("<b>ATS SCORE</b>", styles["SectionHeading"]))
@@ -1000,6 +1030,8 @@ def add_score_card(story, styles, report):
     # Assessment Title
     story.append(Paragraph(report["overall_assessment"]["title"],styles["SectionHeading"]))
 
+    story.append(create_progress_bar(report["score"]))
+    story.append(Spacer(1,15))
     # Assessment Message
     story.append(Paragraph(report["overall_assessment"]["message"],styles["BodyText"]))
 
@@ -1232,7 +1264,135 @@ def add_page_border(canvas, doc):
     canvas.rect( margin, margin, width - 2 * margin, height - 2 * margin)
 
     canvas.restoreState()
+def add_matched_skills(story, styles, report):
 
+    story.append(
+        Paragraph(
+            "<b>Matched Skills</b>",
+            styles["SectionHeading"]
+        )
+    )
+
+    data = [["Matched Skills"]]
+
+    skills = report["matched_skills"]
+
+    if not skills:
+        data.append(["No matched skills found."])
+    else:
+        for skill in skills:
+            data.append([f"✓ {skill}"])
+
+    table = Table(data, colWidths=[6 * inch])
+
+    table.setStyle(
+        TableStyle([
+
+            ("BACKGROUND",(0,0),(-1,0),colors.HexColor("#16A34A")),
+            ("TEXTCOLOR",(0,0),(-1,0),colors.white),
+            ("FONTNAME",(0,0),(-1,0),"Helvetica-Bold"),
+
+            ("BACKGROUND",(0,1),(-1,-1),colors.HexColor("#DCFCE7")),
+
+            ("GRID",(0,0),(-1,-1),0.5,colors.grey),
+
+            ("LEFTPADDING",(0,0),(-1,-1),12),
+            ("RIGHTPADDING",(0,0),(-1,-1),12),
+
+            ("TOPPADDING",(0,1),(-1,-1),8),
+            ("BOTTOMPADDING",(0,1),(-1,-1),8),
+
+        ])
+    )
+
+    story.append(table)
+    story.append(Spacer(1,20))
+
+
+def add_missing_skills(story, styles, report):
+
+    story.append(
+        Paragraph(
+            "<b>Missing Skills</b>",
+            styles["SectionHeading"]
+        )
+    )
+
+    data = [["Missing Skills"]]
+
+    skills = report["missing_skills"]
+
+    if not skills:
+        data.append(["Excellent! No missing skills."])
+    else:
+        for skill in skills:
+            data.append([f"✗ {skill}"])
+
+    table = Table(data, colWidths=[6 * inch])
+
+    table.setStyle(
+        TableStyle([
+
+            ("BACKGROUND",(0,0),(-1,0),colors.HexColor("#DC2626")),
+            ("TEXTCOLOR",(0,0),(-1,0),colors.white),
+            ("FONTNAME",(0,0),(-1,0),"Helvetica-Bold"),
+
+            ("BACKGROUND",(0,1),(-1,-1),colors.HexColor("#FEE2E2")),
+
+            ("GRID",(0,0),(-1,-1),0.5,colors.grey),
+
+            ("LEFTPADDING",(0,0),(-1,-1),12),
+            ("RIGHTPADDING",(0,0),(-1,-1),12),
+
+            ("TOPPADDING",(0,1),(-1,-1),8),
+            ("BOTTOMPADDING",(0,1),(-1,-1),8),
+
+        ])
+    )
+
+    story.append(table)
+    story.append(Spacer(1,20))
+
+
+def add_job_match_feedback(story, styles, report):
+
+    story.append(
+        Paragraph(
+            "<b>Improvement Suggestions</b>",
+            styles["SectionHeading"]
+        )
+    )
+
+    data = [["Suggestions"]]
+
+    for suggestion in report["feedback"]:
+        data.append([f"✓ {suggestion}"])
+
+    table = Table(data, colWidths=[6 * inch])
+
+    table.setStyle(
+        TableStyle([
+
+            ("BACKGROUND",(0,0),(-1,0),colors.HexColor("#F59E0B")),
+            ("TEXTCOLOR",(0,0),(-1,0),colors.white),
+            ("FONTNAME",(0,0),(-1,0),"Helvetica-Bold"),
+
+            ("BACKGROUND",(0,1),(-1,-1),colors.HexColor("#FEF3C7")),
+
+            ("GRID",(0,0),(-1,-1),0.5,colors.grey),
+
+            ("LEFTPADDING",(0,0),(-1,-1),12),
+            ("RIGHTPADDING",(0,0),(-1,-1),12),
+
+            ("TOPPADDING",(0,1),(-1,-1),8),
+            ("BOTTOMPADDING",(0,1),(-1,-1),8),
+
+        ])
+    )
+
+    story.append(table)
+    story.append(Spacer(1,20))
+            
 @app.route("/download-report")
 def download_report():
     global latest_report
@@ -1248,10 +1408,20 @@ def download_report():
     add_header(story, styles, latest_report)
     add_score_card(story, styles, latest_report)
     add_score_table(story, styles, latest_report)
-    add_resume_health(story, styles, latest_report)
-    add_contact_section(story, styles, latest_report)
-    add_skills_section(story, styles, latest_report)
-    add_recommendations(story, styles, latest_report)
+
+    if latest_report.get("mode") == "job_match":
+
+        add_matched_skills(story, styles, latest_report)
+        add_missing_skills(story, styles, latest_report)
+        add_job_match_feedback(story, styles, latest_report)
+
+    else:
+
+        add_resume_health(story, styles, latest_report)
+        add_contact_section(story, styles, latest_report)
+        add_skills_section(story, styles, latest_report)
+        add_recommendations(story, styles, latest_report)
+
     add_footer(story, styles)
 
     doc.build(story,onFirstPage=add_page_border,onLaterPages=add_page_border)
