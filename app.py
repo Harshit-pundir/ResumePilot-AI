@@ -9,6 +9,9 @@
 # -----------------------------
    
 from flask import Flask, request, jsonify, render_template
+from reportlab.platypus import Table, TableStyle
+from reportlab.lib import colors
+from reportlab.lib.units import inch
 from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
 from reportlab.lib.enums import TA_CENTER
 from reportlab.lib.colors import HexColor
@@ -1002,67 +1005,170 @@ def add_score_card(story, styles, report):
     story.append(Spacer(1, 20))
 
 def add_score_table(story, styles, report):
-    # Heading
-    story.append(Paragraph("<b>Score Breakdown</b>", styles["Heading2"]))
+    story.append(Paragraph("<b>Score Breakdown</b>", styles["SectionHeading"]))
 
-    # ATS Score
-    story.append(Paragraph(f"<b>ATS Score:</b> {report['score']}%",styles["BodyText"]))
+    data = [
+        ["Metric", "Score"],
+        ["ATS Score", f"{report['score']}%"],
+        ["Section Score", f"{report['section_score']}%"],
+        ["Contact Score", f"{report['contact_score']}%"],
+        ["Completeness Score", f"{report['completeness_score']}%"]
+    ]
 
-    # Section Score
-    story.append(Paragraph(f"<b>Section Score:</b> {report['section_score']}%",styles["BodyText"]))
+    table = Table(data,colWidths=[4*inch, 1.5*inch])
 
-    # Contact Score
-    story.append(Paragraph(f"<b>Contact Score:</b> {report['contact_score']}%",styles["BodyText"]))
+    table.setStyle(
+        TableStyle([
+            # Header
+            ("BACKGROUND", (0,0), (-1,0), colors.HexColor("#2563EB")),
+            ("TEXTCOLOR", (0,0), (-1,0), colors.white),
+            ("FONTNAME", (0,0), (-1,0), "Helvetica-Bold"),
+            ("FONTSIZE", (0,0), (-1,0), 12),
 
-    # Completeness Score
-    story.append(Paragraph(f"<b>Completeness Score:</b> {report['completeness_score']}%",styles["BodyText"]))
+            # Body
+            ("BACKGROUND", (0,1), (-1,-1), colors.whitesmoke),
+            ("TEXTCOLOR", (0,1), (-1,-1), colors.black),
+            ("FONTNAME", (0,1), (-1,-1), "Helvetica"),
+            ("FONTSIZE", (0,1), (-1,-1), 11),
 
-    story.append(Spacer(1, 20))
+            # Alignment
+            ("ALIGN", (0,0), (-1,-1), "CENTER"),
+            ("VALIGN", (0,0), (-1,-1), "MIDDLE"),
+
+            # Grid
+            ("GRID", (0,0), (-1,-1), 0.5, colors.grey),
+
+            # Padding
+            ("BOTTOMPADDING", (0,0), (-1,0), 10),
+            ("TOPPADDING", (0,1), (-1,-1), 8),
+            ("BOTTOMPADDING", (0,1), (-1,-1), 8),
+        ])
+    )
+
+    story.append(table)
+    story.append(Spacer(1,20))
 
 
 def add_resume_health(story, styles, report):
     # Heading
-    story.append(Paragraph("<b>Resume Health</b>", styles["Heading2"]))
+    story.append(Paragraph("<b>Resume Health</b>",styles["SectionHeading"]) )
 
-    # Section Status
+    data = [["Section", "Status"]]
+
     for section, present in report["sections"].items():
-
         status = "✔ Present" if present else "✖ Missing"
+        data.append([section, status])
 
-        story.append(Paragraph(f"<b>{section}:</b> {status}",styles["BodyText"]))
+    table = Table(data,colWidths=[4*inch, 2*inch])
 
-    story.append(Spacer(1, 20))
+    table.setStyle(
+        TableStyle([
+            ("BACKGROUND", (0,0), (-1,0), colors.HexColor("#2563EB")),
+            ("TEXTCOLOR", (0,0), (-1,0), colors.white),
+            ("FONTNAME", (0,0), (-1,0), "Helvetica-Bold"),
+
+            ("BACKGROUND", (0,1), (-1,-1), colors.whitesmoke),
+
+            ("GRID", (0,0), (-1,-1), 0.5, colors.grey),
+
+            ("ALIGN", (0,0), (-1,-1), "CENTER"),
+
+            ("BOTTOMPADDING", (0,0), (-1,0), 10),
+            ("TOPPADDING", (0,1), (-1,-1), 8),
+            ("BOTTOMPADDING", (0,1), (-1,-1), 8),
+        ])
+    )
+
+    story.append(table)
+    story.append(Spacer(1,20))
 
 
 def add_contact_section(story, styles, report):
-    # Heading
-    story.append(Paragraph("<b>Contact Information</b>", styles["Heading2"]))
+    story.append(Paragraph("<b>Contact Information</b>",styles["SectionHeading"]))
 
-    # Contact Status
+    data = [["Contact", "Status"]]
+
     for contact, present in report["contact"].items():
-
         status = "✔ Available" if present else "✖ Missing"
+        data.append([contact, status])
 
-        story.append(Paragraph(f"<b>{contact}:</b> {status}",styles["BodyText"]))
+    table = Table(
+        data,
+        colWidths=[4*inch, 2*inch]
+    )
 
-    story.append(Spacer(1, 20))
+    table.setStyle(
+        TableStyle([
+            ("BACKGROUND", (0,0), (-1,0), colors.HexColor("#2563EB")),
+            ("TEXTCOLOR", (0,0), (-1,0), colors.white),
+            ("FONTNAME", (0,0), (-1,0), "Helvetica-Bold"),
+
+            ("BACKGROUND", (0,1), (-1,-1), colors.whitesmoke),
+
+            ("GRID", (0,0), (-1,-1), 0.5, colors.grey),
+
+            ("ALIGN", (0,0), (-1,-1), "CENTER"),
+
+            ("BOTTOMPADDING", (0,0), (-1,0), 10),
+            ("TOPPADDING", (0,1), (-1,-1), 8),
+            ("BOTTOMPADDING", (0,1), (-1,-1), 8),
+        ])
+    )
+
+    story.append(table)
+    story.append(Spacer(1,20))
 
 
 def add_skills_section(story, styles, report):
-    # Heading
-    story.append(Paragraph("<b>Detected Skills</b>", styles["Heading2"]))
+    story.append(
+        Paragraph(
+            "<b>Detected Skills</b>",
+            styles["SectionHeading"]
+        )
+    )
 
-    if report["resume_skills"]:
+    skills = report["resume_skills"]
 
-        for skill in report["resume_skills"]:
-
-            story.append(Paragraph(f"• {skill}",styles["BodyText"]))
-
-    else:
-
+    if not skills:
         story.append(Paragraph("No technical skills detected.",styles["BodyText"]))
+        story.append(Spacer(1,20))
+        return
 
-    story.append(Spacer(1, 20))
+    data = [["Skill", "Skill"]]
+
+    for i in range(0, len(skills), 2):
+        left = skills[i]
+
+        if i + 1 < len(skills):
+            right = skills[i + 1]
+        else:
+            right = ""
+
+        data.append([left, right])
+
+    table = Table( data, colWidths=[3*inch, 3*inch])
+
+    table.setStyle(
+        TableStyle([
+
+            ("BACKGROUND",(0,0),(-1,0),colors.HexColor("#2563EB")),
+            ("TEXTCOLOR",(0,0),(-1,0),colors.white),
+            ("FONTNAME",(0,0),(-1,0),"Helvetica-Bold"),
+
+            ("BACKGROUND",(0,1),(-1,-1),colors.whitesmoke),
+
+            ("GRID",(0,0),(-1,-1),0.5,colors.grey),
+
+            ("ALIGN",(0,0),(-1,-1),"CENTER"),
+
+            ("BOTTOMPADDING",(0,0),(-1,0),10),
+            ("TOPPADDING",(0,1),(-1,-1),8),
+            ("BOTTOMPADDING",(0,1),(-1,-1),8),
+        ])
+    )
+
+    story.append(table)
+    story.append(Spacer(1,20))
 
 
 def add_recommendations(story, styles, report):
