@@ -26,6 +26,7 @@ from reportlab.platypus import (SimpleDocTemplate,Paragraph,Spacer)
 from reportlab.lib.styles import getSampleStyleSheet 
 from datetime import datetime
 from reportlab.platypus import Paragraph, Spacer
+import google.generativeai as genai
 import json
 import logging
 import os
@@ -45,6 +46,10 @@ latest_report = {}
 # Reads variables from .env file
 
 load_dotenv()
+genai.configure(api_key=os.getenv("GEMINI_API_KEY"))
+
+model = genai.GenerativeModel("gemini-2.5-flash")
+
 
 
 # -----------------------------
@@ -1392,7 +1397,65 @@ def add_job_match_feedback(story, styles, report):
 
     story.append(table)
     story.append(Spacer(1,20))
-            
+
+def generate_ai_resume_feedback(resume_text):
+
+    prompt = f"""
+        You are an expert ATS Resume Writer.
+
+        Analyze the following resume.
+
+        Improve only these sections.
+
+        1. Professional Summary
+
+        2. Technical Skills
+
+        3. Projects
+
+        4. Experience
+
+        5. General ATS Tips
+
+        Rules:
+
+        - Never invent fake experience.
+        - Never add technologies not already supported by the resume.
+        - Improve wording professionally.
+        - Keep everything truthful.
+        - Return clean Markdown.
+
+        Resume:
+
+        {resume_text}
+        """
+
+    response = model.generate_content(prompt)
+
+    return response.text
+
+@app.route("/ai-improve", methods=["POST"])
+def ai_improve():
+
+    file = request.files.get("resume")
+
+    if not file:
+        return jsonify({"error": "Resume not uploaded"}), 400
+
+    try:
+        resume_text = extract_text_from_pdf(file)
+    except Exception:
+        return jsonify({"error": "Unable to read resume"}), 400
+
+    try:
+        result = generate_ai_resume_feedback(resume_text)
+    except Exception:
+        return jsonify({"error": "AI service unavailable"}), 500
+
+    return jsonify({
+        "response": result
+    })
+
 @app.route("/download-report")
 def download_report():
     global latest_report

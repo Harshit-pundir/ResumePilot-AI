@@ -6,6 +6,11 @@ const textarea = document.getElementById("job_description");
 const submitBtn = document.getElementById("submit-btn");
 const loader = document.getElementById("loader");
 const result = document.getElementById("result");
+const aiImproveModal = document.getElementById("ai-improve-modal");
+const aiImproveContent = document.getElementById("ai-improve-content");
+const copySuggestionsBtn = document.getElementById("copy-suggestions-btn");
+let aiSuggestions = "";
+let lastFocusedElement = null;
 
 const escapeHtml = (value = "") =>
     String(value)
@@ -106,6 +111,71 @@ const setLoading = (isLoading) => {
     loader.classList.toggle("hidden", !isLoading);
 };
 
+const openAiModal = () => {
+    lastFocusedElement = document.activeElement;
+    aiImproveModal.classList.remove("hidden");
+    document.body.classList.add("modal-open");
+    aiImproveModal.querySelector(".ai-modal__close").focus();
+};
+
+const closeAiModal = () => {
+    aiImproveModal.classList.add("hidden");
+    document.body.classList.remove("modal-open");
+    lastFocusedElement?.focus();
+};
+
+const renderAiError = (message) => {
+    aiImproveContent.innerHTML = `<p class="ai-modal__error" role="alert">${escapeHtml(message)}</p>`;
+    copySuggestionsBtn.classList.add("hidden");
+    openAiModal();
+};
+
+const renderAiSuggestions = (suggestions) => {
+    aiSuggestions = suggestions;
+    // AI output is rendered as Markdown while raw HTML is escaped before parsing.
+    const safeMarkdown = escapeHtml(suggestions);
+    const renderedMarkdown = typeof marked !== "undefined"
+        ? marked.parse(safeMarkdown, { breaks: true })
+        : `<p>${safeMarkdown.replace(/\n/g, "<br>")}</p>`;
+    aiImproveContent.innerHTML = typeof DOMPurify !== "undefined"
+        ? DOMPurify.sanitize(renderedMarkdown)
+        : renderedMarkdown;
+    copySuggestionsBtn.classList.remove("hidden");
+    copySuggestionsBtn.textContent = "Copy Suggestions";
+    openAiModal();
+};
+
+const improveResume = async (button) => {
+    const file = fileInput.files[0];
+
+    if (!file) {
+        renderAiError("Please upload your resume before requesting AI suggestions.");
+        return;
+    }
+
+    button.disabled = true;
+    button.innerHTML = '<span class="button-spinner" aria-hidden="true"></span> Improving...';
+
+    try {
+        const formData = new FormData();
+        formData.append("resume", file);
+        const response = await fetch("/ai-improve", { method: "POST", body: formData });
+        const data = await response.json().catch(() => ({}));
+
+        if (!response.ok || data.error || !data.response) {
+            renderAiError(data.error || "We could not generate suggestions right now. Please try again.");
+            return;
+        }
+
+        renderAiSuggestions(data.response);
+    } catch (error) {
+        renderAiError("Could not connect to the AI service. Please make sure the Flask server is running and try again.");
+    } finally {
+        button.disabled = false;
+        button.textContent = "✨ AI Improve Resume";
+    }
+};
+
 const renderError = (message) => {
     result.classList.remove("hidden");
     result.innerHTML = `
@@ -182,6 +252,7 @@ const renderResult = (data) => {
 
         <div class="result-actions">
             <button type="button" class="report-button" id="download-report-btn">Download ATS Report</button>
+            <button type="button" class="ai-improve-button" id="ai-improve-btn">✨ AI Improve Resume</button>
             <button type="button" class="analyze-again-button" id="analyze-again-btn">Analyze Another Resume</button>
         </div>
     `;
@@ -205,6 +276,11 @@ const renderResult = (data) => {
         });
     }
 
+    const aiImproveBtn = document.getElementById("ai-improve-btn");
+    if (aiImproveBtn) {
+        aiImproveBtn.addEventListener("click", () => improveResume(aiImproveBtn));
+    }
+
     result.scrollIntoView({ behavior: "smooth", block: "start" });
 };
 
@@ -215,6 +291,26 @@ fileInput.addEventListener("change", setFileName);
         event.preventDefault();
         uploadBox.classList.add("is-dragging");
     });
+});
+
+aiImproveModal.querySelectorAll("[data-modal-close]").forEach((element) => {
+    element.addEventListener("click", closeAiModal);
+});
+
+document.addEventListener("keydown", (event) => {
+    if (event.key === "Escape" && !aiImproveModal.classList.contains("hidden")) {
+        closeAiModal();
+    }
+});
+
+copySuggestionsBtn.addEventListener("click", async () => {
+    try {
+        await navigator.clipboard.writeText(aiSuggestions);
+        copySuggestionsBtn.textContent = "Copied!";
+        setTimeout(() => { copySuggestionsBtn.textContent = "Copy Suggestions"; }, 1800);
+    } catch (error) {
+        copySuggestionsBtn.textContent = "Copy failed — select text instead";
+    }
 });
 
 ["dragleave", "drop"].forEach((eventName) => {

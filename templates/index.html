@@ -105,6 +105,27 @@
         <p>© 2026 Harshit Pundir · ATS Resume Analyzer</p>
     </footer>
 
+    <div class="ai-modal hidden" id="ai-improve-modal" role="dialog" aria-modal="true"
+        aria-labelledby="ai-improve-title" aria-describedby="ai-improve-content">
+        <div class="ai-modal__backdrop" data-modal-close></div>
+        <section class="ai-modal__dialog" role="document">
+            <header class="ai-modal__header">
+                <div>
+                    <p class="eyebrow">AI Resume Coach</p>
+                    <h2 id="ai-improve-title">Resume improvement suggestions</h2>
+                </div>
+                <button type="button" class="ai-modal__close" data-modal-close aria-label="Close suggestions">&times;</button>
+            </header>
+            <div class="ai-modal__content" id="ai-improve-content"></div>
+            <footer class="ai-modal__footer">
+                <button type="button" class="copy-suggestions-button" id="copy-suggestions-btn">Copy Suggestions</button>
+                <button type="button" class="analyze-again-button" data-modal-close>Close</button>
+            </footer>
+        </section>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/dompurify@3.2.6/dist/purify.min.js"></script>
     <script src="{{ url_for('static', filename='js/script.js') }}"></script>
 </body>
 </html>
