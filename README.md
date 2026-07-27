@@ -148,26 +148,37 @@ Every resume analysis is automatically stored in Supabase.
 # 📂 Project Structure
 
 ```text
-resume-ats-analyzer/
-│
+ATS checker/
 ├── app.py
+├── config.py
+├── extensions.py
+├── routes/
+│   ├── __init__.py
+│   ├── home.py
+│   ├── upload.py
+│   ├── ai.py
+│   ├── history.py
+│   └── report.py
+├── services/
+│   ├── __init__.py
+│   ├── pdf_parser.py
+│   ├── section_extractor.py
+│   ├── skills_service.py
+│   ├── contact_service.py
+│   ├── scoring_service.py
+│   ├── feedback_service.py
+│   ├── ai_service.py
+│   └── pdf_report_service.py
+├── utils/
+│   ├── __init__.py
+│   ├── constants.py
+│   ├── logger.py
+│   └── helpers.py
+├── templates/
+├── static/
 ├── skills.json
 ├── requirements.txt
-├── .env.example
-├── README.md
-│
-├── static/
-│   ├── css/
-│   │   ├── style.css
-│   │   └── history.css
-│   ├── js/
-│   └── images/
-│
-├── templates/
-│   ├── index.html
-│   └── history.html
-│
-└── screenshots/
+└── .env
 ```
 
 ---
