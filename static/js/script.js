@@ -9,8 +9,11 @@ const result = document.getElementById("result");
 const aiImproveModal = document.getElementById("ai-improve-modal");
 const aiImproveContent = document.getElementById("ai-improve-content");
 const copySuggestionsBtn = document.getElementById("copy-suggestions-btn");
+const downloadSuggestionsBtn = document.getElementById("download-suggestions-btn");
+const toast = document.getElementById("toast");
 let aiSuggestions = "";
 let lastFocusedElement = null;
+let toastTimeout;
 
 const escapeHtml = (value = "") =>
     String(value)
@@ -124,25 +127,91 @@ const closeAiModal = () => {
     lastFocusedElement?.focus();
 };
 
-const renderAiError = (message) => {
-    aiImproveContent.innerHTML = `<p class="ai-modal__error" role="alert">${escapeHtml(message)}</p>`;
+const showToast = (message) => {
+    toast.textContent = message;
+    toast.classList.remove("hidden");
+    window.clearTimeout(toastTimeout);
+    toastTimeout = window.setTimeout(() => toast.classList.add("hidden"), 2200);
+};
+
+const copyRenderedSuggestions = async () => {
+    const plainText = aiImproveContent.innerText.trim() || aiSuggestions;
+    const renderedHtml = aiImproveContent.innerHTML;
+
+    if (navigator.clipboard?.write && window.ClipboardItem) {
+        try {
+            await navigator.clipboard.write([
+                new ClipboardItem({
+                    "text/plain": new Blob([plainText], { type: "text/plain" }),
+                    "text/html": new Blob([renderedHtml], { type: "text/html" }),
+                }),
+            ]);
+            return;
+        } catch (error) {
+            // Some browsers support text clipboard access but not rich HTML clipboard items.
+        }
+    }
+
+    if (navigator.clipboard?.writeText) {
+        await navigator.clipboard.writeText(plainText);
+        return;
+    }
+
+    const fallback = document.createElement("textarea");
+    fallback.value = plainText;
+    fallback.setAttribute("readonly", "");
+    fallback.style.position = "fixed";
+    fallback.style.opacity = "0";
+    document.body.appendChild(fallback);
+    fallback.select();
+    const copied = document.execCommand("copy");
+    fallback.remove();
+    if (!copied) throw new Error("Clipboard is unavailable");
+};
+
+const decorateAiSections = () => {
+    const icons = { "Professional Summary": "✦", Projects: "⌘", Skills: "◈", Experience: "▣", Achievements: "★", "ATS Tips": "✓" };
+    aiImproveContent.querySelectorAll("h2").forEach((heading) => {
+        const label = heading.textContent.trim();
+        heading.classList.add("ai-section-title");
+        if (icons[label]) heading.innerHTML = `<span aria-hidden="true">${icons[label]}</span>${escapeHtml(label)}`;
+    });
+    aiImproveContent.querySelectorAll("h3").forEach((heading) => {
+        const label = heading.textContent.trim().toLowerCase();
+        if (label === "current" || label === "improved") heading.classList.add("ai-comparison-label", `is-${label}`);
+    });
+    aiImproveContent.querySelectorAll("p").forEach((paragraph) => {
+        if (paragraph.textContent.trim() === "↓") paragraph.classList.add("ai-improvement-arrow");
+    });
+};
+
+const renderAiLoading = () => {
+    aiSuggestions = "";
+    aiImproveContent.innerHTML = '<div class="ai-loading" role="status" aria-live="polite"><span class="ai-loading__spinner" aria-hidden="true"></span><div><strong>AI is analyzing your resume...</strong><p>Creating accurate, ATS-focused improvements from your existing content.</p></div></div>';
     copySuggestionsBtn.classList.add("hidden");
+    downloadSuggestionsBtn.classList.add("hidden");
     openAiModal();
 };
 
-const renderAiSuggestions = (suggestions) => {
-    aiSuggestions = suggestions;
-    // AI output is rendered as Markdown while raw HTML is escaped before parsing.
-    const safeMarkdown = escapeHtml(suggestions);
-    const renderedMarkdown = typeof marked !== "undefined"
-        ? marked.parse(safeMarkdown, { breaks: true })
-        : `<p>${safeMarkdown.replace(/\n/g, "<br>")}</p>`;
-    aiImproveContent.innerHTML = typeof DOMPurify !== "undefined"
-        ? DOMPurify.sanitize(renderedMarkdown)
-        : renderedMarkdown;
-    copySuggestionsBtn.classList.remove("hidden");
-    copySuggestionsBtn.textContent = "Copy Suggestions";
+const renderAiError = (message) => {
+    aiSuggestions = "";
+    aiImproveContent.innerHTML = `<p class="ai-modal__error" role="alert">${escapeHtml(message)}</p>`;
+    copySuggestionsBtn.classList.add("hidden");
+    downloadSuggestionsBtn.classList.add("hidden");
     openAiModal();
+};
+
+const renderAiSuggestions = (suggestions, html) => {
+    aiSuggestions = suggestions;
+    // Markdown is converted server-side with Python-Markdown and sanitized before display.
+    aiImproveContent.innerHTML = typeof DOMPurify !== "undefined"
+        ? DOMPurify.sanitize(html)
+        : html;
+    decorateAiSections();
+    copySuggestionsBtn.classList.remove("hidden");
+    downloadSuggestionsBtn.classList.remove("hidden");
+    copySuggestionsBtn.textContent = "Copy AI Suggestions";
+    if (aiImproveModal.classList.contains("hidden")) openAiModal();
 };
 
 const improveResume = async (button) => {
@@ -154,23 +223,29 @@ const improveResume = async (button) => {
     }
 
     button.disabled = true;
-    button.innerHTML = '<span class="button-spinner" aria-hidden="true"></span> Improving...';
+    button.innerHTML = '<span class="button-spinner" aria-hidden="true"></span> AI is analyzing...';
+    renderAiLoading();
+    const controller = new AbortController();
+    const timeout = window.setTimeout(() => controller.abort(), 50000);
 
     try {
         const formData = new FormData();
         formData.append("resume", file);
-        const response = await fetch("/ai-improve", { method: "POST", body: formData });
+        const response = await fetch("/ai-improve", { method: "POST", body: formData, signal: controller.signal });
         const data = await response.json().catch(() => ({}));
 
-        if (!response.ok || data.error || !data.response) {
+        if (!response.ok || data.error || !data.response || !data.html) {
             renderAiError(data.error || "We could not generate suggestions right now. Please try again.");
             return;
         }
 
-        renderAiSuggestions(data.response);
+        renderAiSuggestions(data.response, data.html);
     } catch (error) {
-        renderAiError("Could not connect to the AI service. Please make sure the Flask server is running and try again.");
+        renderAiError(error.name === "AbortError"
+            ? "The AI request took too long. Please try again in a moment."
+            : "We could not reach the AI service. Please check your connection and try again.");
     } finally {
+        window.clearTimeout(timeout);
         button.disabled = false;
         button.textContent = "✨ AI Improve Resume";
     }
@@ -305,11 +380,45 @@ document.addEventListener("keydown", (event) => {
 
 copySuggestionsBtn.addEventListener("click", async () => {
     try {
-        await navigator.clipboard.writeText(aiSuggestions);
+        await copyRenderedSuggestions();
         copySuggestionsBtn.textContent = "Copied!";
-        setTimeout(() => { copySuggestionsBtn.textContent = "Copy Suggestions"; }, 1800);
+        showToast("Copied AI suggestions to clipboard.");
+        setTimeout(() => { copySuggestionsBtn.textContent = "Copy AI Suggestions"; }, 1800);
     } catch (error) {
-        copySuggestionsBtn.textContent = "Copy failed — select text instead";
+        showToast("We could not access your clipboard. Please copy the text manually.");
+    }
+});
+
+downloadSuggestionsBtn.addEventListener("click", async () => {
+    if (!aiSuggestions || !window.html2canvas || !window.jspdf) return;
+    const originalLabel = downloadSuggestionsBtn.textContent;
+    downloadSuggestionsBtn.disabled = true;
+    downloadSuggestionsBtn.textContent = "Preparing PDF...";
+    const timestamp = new Intl.DateTimeFormat(undefined, { dateStyle: "medium", timeStyle: "short" }).format(new Date());
+    const exportCard = document.createElement("article");
+    exportCard.className = "ai-pdf-export";
+    exportCard.innerHTML = `<header><p>ATS ANALYZER · AI RESUME COACH</p><h1>AI Resume Suggestions</h1><time>Generated ${escapeHtml(timestamp)}</time></header><div>${aiImproveContent.innerHTML}</div>`;
+    document.body.appendChild(exportCard);
+    try {
+        const canvas = await window.html2canvas(exportCard, { scale: 2, backgroundColor: "#ffffff", useCORS: true });
+        const { jsPDF } = window.jspdf;
+        const pdf = new jsPDF("p", "mm", "a4");
+        const width = 190;
+        const pageHeight = 277;
+        const imageHeight = (canvas.height * width) / canvas.width;
+        const image = canvas.toDataURL("image/png");
+        for (let offset = 0; offset < imageHeight; offset += pageHeight) {
+            pdf.addImage(image, "PNG", 10, 10 - offset, width, imageHeight);
+            if (offset + pageHeight < imageHeight) pdf.addPage();
+        }
+        pdf.save("ai-resume-suggestions.pdf");
+        showToast("AI suggestions PDF downloaded.");
+    } catch (error) {
+        showToast("We could not create the PDF. Please try again.");
+    } finally {
+        exportCard.remove();
+        downloadSuggestionsBtn.disabled = false;
+        downloadSuggestionsBtn.textContent = originalLabel;
     }
 });
 
