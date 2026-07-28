@@ -1119,6 +1119,17 @@ footer {
     color: var(--muted);
 }
 
+.ai-section-empty {
+    margin: 0 0 18px;
+    padding: 12px 14px;
+    border: 1px dashed var(--line);
+    border-radius: 10px;
+    background: var(--paper);
+    color: var(--muted);
+    font-size: 0.94rem;
+    font-style: italic;
+}
+
 .ai-modal__content pre {
     overflow-x: auto;
     margin: 16px 0;

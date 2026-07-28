@@ -28,16 +28,23 @@ Return clean Markdown only. Use exactly these level-two sections, in this order:
 ## Achievements
 ## ATS Tips
 
-For every section, use this exact structure:
+For a source section that is missing or has no usable content, write only this directly below its heading:
+> Section not found in the uploaded resume.
+
+For a source section that is present but needs no meaningful rewrite, present its faithful content directly below the heading. Do not use "Current" or "Improved" labels.
+
+Only when a meaningful wording or structure improvement is possible, use this exact comparison structure:
 ### Current
-[faithful concise extract or "Not present in the resume"]
+[faithful extract that preserves headings, project names, bullet points, ordering, and all stated facts]
 
 ↓
 
 ### Improved
-[only an improved version of the existing content, or "No rewrite suggested because this content is not present."]
+[only a clearer version of the same content]
 
-For ATS Tips, use Current to list only gaps visible in the resume, and Improved to list factual, actionable bullets. Do not claim that a missing item exists.
+Projects are especially important: preserve each project separately and retain its bullet-list structure in both Current and Improved. Do not merge projects into a paragraph, omit bullets, invent project details, or change the number of projects.
+
+For ATS Tips, do not use Current/Improved. Provide 3-5 personalized, actionable bullets based only on specific strengths, wording, sections, or gaps visibly present in this resume. Point to the observed content or missing section that motivates each tip; never give generic advice and never claim an unlisted fact exists.
 
 Resume:
 

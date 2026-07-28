@@ -169,7 +169,67 @@ const copyRenderedSuggestions = async () => {
     if (!copied) throw new Error("Clipboard is unavailable");
 };
 
+const getSectionNodes = (heading) => {
+    const nodes = [];
+    let node = heading.nextElementSibling;
+    while (node && node.tagName !== "H2") {
+        nodes.push(node);
+        node = node.nextElementSibling;
+    }
+    return nodes;
+};
+
+const getComparisonContent = (heading) => {
+    const nodes = [];
+    let node = heading.nextElementSibling;
+    while (node && !["H2", "H3"].includes(node.tagName)) {
+        nodes.push(node);
+        node = node.nextElementSibling;
+    }
+    return nodes;
+};
+
+const isMissingSection = (text) => /^(section not found in the uploaded resume|not present in the resume)[.!\s]*$/i.test(text.trim());
+
+const normalizeAiSections = () => {
+    aiImproveContent.querySelectorAll("h2").forEach((sectionHeading) => {
+        let sectionNodes = getSectionNodes(sectionHeading);
+        const sectionText = sectionNodes.map((node) => node.innerText.trim()).filter(Boolean).join(" ");
+
+        if (!sectionText || isMissingSection(sectionText)) {
+            sectionNodes.forEach((node) => node.remove());
+            const emptyMessage = document.createElement("p");
+            emptyMessage.className = "ai-section-empty";
+            emptyMessage.textContent = "Section not found in the uploaded resume.";
+            sectionHeading.insertAdjacentElement("afterend", emptyMessage);
+            return;
+        }
+
+        const currentHeading = sectionNodes.find((node) => node.tagName === "H3" && node.textContent.trim().toLowerCase() === "current");
+        const improvedHeading = sectionNodes.find((node) => node.tagName === "H3" && node.textContent.trim().toLowerCase() === "improved");
+        if (!currentHeading || !improvedHeading) return;
+
+        const currentContent = getComparisonContent(currentHeading);
+        const improvedContent = getComparisonContent(improvedHeading);
+        const currentText = currentContent.map((node) => node.innerText).join(" ").replace(/\s+/g, " ").trim().toLowerCase();
+        const improvedText = improvedContent.map((node) => node.innerText).join(" ").replace(/\s+/g, " ").trim().toLowerCase();
+        const hasMeaningfulDifference = currentText && improvedText
+            && currentText !== improvedText
+            && !/no rewrite suggested|no changes? (are|is) recommended/i.test(improvedText);
+
+        if (hasMeaningfulDifference) return;
+
+        // A comparison without a real improvement is easier to read as the original section.
+        const arrow = sectionNodes.find((node) => node.textContent.trim() === "↓");
+        arrow?.remove();
+        currentHeading.remove();
+        improvedHeading.remove();
+        improvedContent.forEach((node) => node.remove());
+    });
+};
+
 const decorateAiSections = () => {
+    normalizeAiSections();
     const icons = { "Professional Summary": "✦", Projects: "⌘", Skills: "◈", Experience: "▣", Achievements: "★", "ATS Tips": "✓" };
     aiImproveContent.querySelectorAll("h2").forEach((heading) => {
         const label = heading.textContent.trim();
