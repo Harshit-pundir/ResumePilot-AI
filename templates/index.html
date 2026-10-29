@@ -19,7 +19,7 @@
             <a href="#result">Score</a>
             <a href="#job_description">Job Match</a>
         </div>
-        <a class="nav-action" href="{{ url_for('history.history') }}">Analysis History</a>
+        <a class="nav-action" href="/history">Analysis History</a>
     </nav>
 
     <main>
@@ -114,12 +114,15 @@
                     <p class="eyebrow">AI Resume Coach</p>
                     <h2 id="ai-improve-title">Resume improvement suggestions</h2>
                 </div>
-                <button type="button" class="ai-modal__close" data-modal-close aria-label="Close suggestions">&times;</button>
+                <button type="button" class="ai-modal__close" data-modal-close
+                    aria-label="Close suggestions">&times;</button>
             </header>
             <div class="ai-modal__content" id="ai-improve-content" tabindex="0"></div>
             <footer class="ai-modal__footer">
-                <button type="button" class="copy-suggestions-button" id="copy-suggestions-btn">Copy AI Suggestions</button>
-                <button type="button" class="download-suggestions-button" id="download-suggestions-btn">Download PDF</button>
+                <button type="button" class="copy-suggestions-button" id="copy-suggestions-btn">Copy AI
+                    Suggestions</button>
+                <button type="button" class="download-suggestions-button" id="download-suggestions-btn">Download
+                    PDF</button>
                 <button type="button" class="analyze-again-button" data-modal-close>Close</button>
             </footer>
         </section>
@@ -129,6 +132,7 @@
     <script src="https://cdn.jsdelivr.net/npm/dompurify@3.2.6/dist/purify.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.2/dist/jspdf.umd.min.js"></script>
-    <script src="{{ url_for('static', filename='js/script.js') }}"></script>
+    <script src="{{ url_for('static', path='js/script.js') }}"></script>
 </body>
+
 </html>
