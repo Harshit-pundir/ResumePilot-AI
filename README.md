@@ -1,4 +1,4 @@
-<div align="center">
+ <div align="center">
 
 # 🚀 ResumePilot AI
 
@@ -7,15 +7,13 @@
 An **NLP-powered Resume ATS Analyzer** that evaluates resumes, compares them with Job Descriptions, detects missing skills, and provides actionable feedback to improve ATS compatibility.
 
 <p align="center">
-
-<a href="https://resumepilot-ai-gr6u.onrender.com/">
-<img src="https://img.shields.io/badge/🚀-Live_Demo-success?style=for-the-badge">
-</a>
-
+  <a href="https://resumepilot-ai-gr6u.onrender.com/">
+    <img src="https://img.shields.io/badge/🚀-Live_Demo-success?style=for-the-badge">
+  </a>
 </p>
 
 ![Python](https://img.shields.io/badge/Python-3.11-blue?logo=python)
-![Flask](https://img.shields.io/badge/Flask-3.x-black?logo=flask)
+![FastAPI](https://img.shields.io/badge/FastAPI-Backend-009688?logo=fastapi)
 ![spaCy](https://img.shields.io/badge/NLP-spaCy-09A3D5)
 ![Supabase](https://img.shields.io/badge/Database-Supabase-3ECF8E?logo=supabase)
 ![JavaScript](https://img.shields.io/badge/JavaScript-ES6-F7DF1E?logo=javascript)
@@ -46,7 +44,8 @@ Whether you're applying for internships or full-time software engineering roles,
 - 🎯 ATS Resume & Job Description Matching
 - 📊 Multi-factor ATS Scoring System
 - 🗄️ Resume Analysis History with Supabase
-- ⚡ Responsive Flask Web Application
+- ⚡ FastAPI-powered Backend
+- 🎨 Responsive Web Interface
 
 # ✨ Features
 
@@ -81,14 +80,14 @@ Every resume analysis is automatically stored in Supabase.
 - 📊 Track ATS scores over time
 - 🕒 Analysis timestamp
 - 📁 Separate Resume Analysis & Job Match history
-- ⚡ Beautiful history dashboard
+- ⚡ Interactive history dashboard
 
 ---
 
 ## 📊 Detailed ATS Score
 
 | Score | Description |
-|--------|-------------|
+|---|---|
 | 🎯 Overall Score | Final Resume / ATS Score |
 | 💻 Skill Match | Resume vs Job Description |
 | 📂 Section Score | Skills, Projects, Education & Experience |
@@ -100,34 +99,34 @@ Every resume analysis is automatically stored in Supabase.
 # 🧠 How It Works
 
 ```text
-                   Resume (PDF)
-                        │
-                        ▼
-              PDF Text Extraction
+                  Resume (PDF)
+                       |
+                       ▼
+             PDF Text Extraction
                   (PyPDF2)
-                        │
-                        ▼
-               Resume Text Processing
-                        │
-        ┌───────────────┼───────────────┐
-        ▼               ▼               ▼
- Resume Sections   Contact Details   Skill Extraction
-        │               │               │
-        └───────────────┼───────────────┘
-                        ▼
-                 ATS Scoring Engine
-                        │
-            ┌───────────┴────────────┐
-            ▼                        ▼
-     Resume Analysis           Job Match
-            │                        │
-            └───────────┬────────────┘
-                        ▼
-          Save Analysis History
-               (Supabase)
-                        │
-                        ▼
-            Interactive Dashboard
+                       |
+                       ▼
+              Resume Text Processing
+                       |
+       ┌───────────────┼───────────────┐
+       ▼               ▼               ▼
+Resume Sections   Contact Details   Skill Extraction
+       |               |               |
+       └───────────────┼───────────────┘
+                       ▼
+                ATS Scoring Engine
+                       |
+           ┌───────────┴────────────┐
+           ▼                        ▼
+    Resume Analysis           Job Match
+           |                        |
+           └───────────┬────────────┘
+                       ▼
+         Save Analysis History
+                  (Supabase)
+                       |
+                       ▼
+           Interactive Dashboard
 ```
 
 ---
@@ -135,12 +134,13 @@ Every resume analysis is automatically stored in Supabase.
 # 🏗️ Tech Stack
 
 | Category | Technology |
-|----------|------------|
-| Backend | Python, Flask |
+|---|---|
+| Backend | Python, FastAPI |
 | NLP | spaCy |
 | PDF Parsing | PyPDF2 |
 | Database | Supabase (PostgreSQL) |
 | Frontend | HTML5, CSS3, Vanilla JavaScript |
+| API Documentation | FastAPI, Swagger UI |
 | Version Control | Git & GitHub |
 
 ---
@@ -181,6 +181,8 @@ ATS checker/
 └── .env
 ```
 
+*Note: Update the filenames in this tree to match your actual FastAPI project structure.*
+
 ---
 
 # ⚙️ Installation
@@ -189,7 +191,7 @@ ATS checker/
 
 ```bash
 git clone https://github.com/Harshit-pundir/ResumePilot-AI.git
-cd resume-ats-analyzer
+cd ResumePilot-AI
 ```
 
 ---
@@ -235,22 +237,34 @@ Create a `.env` file in the project root.
 ```env
 SECRET_KEY=your_secret_key
 SUPABASE_URL=your_supabase_url
-SUPABASE_KEY=your_supabase_key
+SUPABASE_KEY=your_supabase_secret_key
+GROQ_API_KEY=your_groq_api_key
 ```
+
+**Important:** Never commit your `.env` file or expose your Supabase secret key publicly.
 
 ---
 
 ## 6️⃣ Run the Application
 
+Start the FastAPI server using Uvicorn:
+
 ```bash
-python app.py
+uvicorn app2:app --reload
 ```
 
-Open your browser and visit:
+Open your browser:
 
 ```text
-http://127.0.0.1:5000
+http://127.0.0.1:8000
 ```
+
+### 📚 API Documentation
+
+FastAPI automatically generates interactive API documentation.
+
+- **Swagger UI:** http://127.0.0.1:8000/docs
+- **ReDoc:** http://127.0.0.1:8000/redoc
 
 ---
 
@@ -259,7 +273,9 @@ http://127.0.0.1:5000
 ## 🏠 Landing Page
 
 ![Landing Page](screenshots/landing1.png)
+
 ![Landing Page](screenshots/landing2.png)
+
 ---
 
 ## 📊 ATS Result Dashboard
@@ -282,6 +298,7 @@ http://127.0.0.1:5000
 - [ ] AI Resume Suggestions
 - [x] Dark Mode
 - [x] Live Deployment
+- [x] Migrate Backend from Flask to FastAPI
 
 ---
 
@@ -289,10 +306,10 @@ http://127.0.0.1:5000
 
 Contributions are welcome!
 
-1. Fork the repository
-2. Create a new branch
-3. Commit your changes
-4. Open a Pull Request
+1. Fork the repository.
+2. Create a new branch.
+3. Commit your changes.
+4. Open a Pull Request.
 
 ---
 
