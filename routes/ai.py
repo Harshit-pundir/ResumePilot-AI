@@ -1,12 +1,13 @@
 import markdown
 
-from flask import Blueprint, jsonify, request
+from fastapi import APIRouter , File , UploadFile
+from fastapi.responses import JSONResponse
 
 from services.ai_service import generate_ai_resume_feedback
 from services.pdf_parser import extract_text_from_pdf
 from utils.logger import get_logger
 
-ai_bp = Blueprint("ai", __name__)
+router = APIRouter()
 logger = get_logger(__name__)
 
 
@@ -39,26 +40,25 @@ def _friendly_ai_error(error):
     return "We could not generate AI suggestions right now. Please try again.", 500
 
 
-@ai_bp.route("/ai-improve", methods=["POST"])
-def ai_improve():
-    file = request.files.get("resume")
-    if not file:
+@router.post("/ai-improve")
+def ai_improve(resume : UploadFile = File(None)):
+    if not resume:
         error_response = {"error": "Resume not uploaded"}
-        return jsonify(error_response), 400
+        return JSONResponse(error_response, 400)
 
     try:
-        resume_text = extract_text_from_pdf(file)
+        resume_text = extract_text_from_pdf(resume.file)
     except Exception:
         error_response = {"error": "Unable to read resume"}
-        return jsonify(error_response), 400
-
+        return JSONResponse(error_response, 400)
+    
     try:
         result = generate_ai_resume_feedback(resume_text)
     except Exception as error:
         logger.exception("AI provider error")
         message, status = _friendly_ai_error(error)
         error_response = {"error": message}
-        return jsonify(error_response), status
+        return JSONResponse(error_response, status)
 
     rendered_html = markdown.markdown(
         result,
@@ -69,4 +69,4 @@ def ai_improve():
         "response": result,
         "html": rendered_html,
     }
-    return jsonify(response_payload)
+    return response_payload

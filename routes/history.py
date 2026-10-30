@@ -1,18 +1,31 @@
-from flask import Blueprint, current_app, render_template
+from fastapi import APIRouter, Request
+from fastapi.responses import HTMLResponse
+from fastapi.templating import Jinja2Templates
 
-import extensions
+from extensions import supabase
 from utils.logger import get_logger
 
-history_bp = Blueprint("history", __name__)
+router = APIRouter()
+templates = Jinja2Templates(directory="templates")
 logger = get_logger(__name__)
 
 
-@history_bp.route("/history")
-def history():
+@router.get("/api/history")
+def get_history():
     try:
-        response = extensions.get_supabase(current_app).table("resume_history").select("*").order("created_at", desc=True).execute()
+        response = supabase.table("resume_history").select("*").order("created_at", desc=True).execute()
+        return response.data or []
+    except Exception:
+        logger.exception("History fetch failed")
+        return []
+
+
+@router.get("/history", response_class=HTMLResponse)
+def history_page(request: Request):
+    try:
+        response = supabase.table("resume_history").select("*").order("created_at", desc=True).execute()
         history_items = response.data or []
     except Exception:
-        logger.exception("Failed to fetch resume history from Supabase.")
+        logger.exception("History fetch failed")
         history_items = []
-    return render_template("history.html", history=history_items)
+    return templates.TemplateResponse(request, "history.html", {"history": history_items})

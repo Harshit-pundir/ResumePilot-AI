@@ -1,18 +1,21 @@
 from io import BytesIO
 
-from flask import Blueprint, send_file
+from fastapi import APIRouter
+from fastapi.responses import JSONResponse , StreamingResponse
 
 import extensions
 from services.pdf_report_service import build_pdf_report
 
-report_bp = Blueprint("report", __name__)
+router = APIRouter()
 
 
-@report_bp.route("/download-report")
+@router.get("/download-report")
 def download_report():
     if not extensions.latest_report:
-        return {"error": "No report available."}, 400
+        return JSONResponse({"error": "No report available."}, 400)
+    
     buffer = BytesIO()
     build_pdf_report(buffer, extensions.latest_report)
     buffer.seek(0)
-    return send_file(buffer, as_attachment=True, download_name="ResumePilot_Report.pdf", mimetype="application/pdf")
+
+    return StreamingResponse(buffer , media_type="application/pdf" , headers={"Content-Disposition": 'attachment; filename = ResumePilot_report.pdf'},)

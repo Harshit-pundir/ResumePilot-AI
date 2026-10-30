@@ -1,8 +1,11 @@
-from flask import Blueprint, render_template
+from fastapi import APIRouter , Request
+from fastapi.responses import HTMLResponse
+from fastapi.templating import Jinja2Templates
 
-home_bp = Blueprint("home", __name__)
+templates = Jinja2Templates(directory="templates")
+router = APIRouter()
 
 
-@home_bp.route("/")
-def home() -> str:
-    return render_template("index.html")
+@router.get("/" , response_class=HTMLResponse)
+def home(request : Request):
+    return templates.TemplateResponse(request, "index.html")

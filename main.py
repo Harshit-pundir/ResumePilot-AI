@@ -1,9 +1,9 @@
 from fastapi import FastAPI
-from routes.history2 import router as history_router
-from routes.ai2 import router as ai_router
-from routes.home2 import router as home_router
-from routes.report2 import router as report_router
-from routes.upload2 import router as upload_router
+from routes.history import router as history_router
+from routes.ai import router as ai_router
+from routes.home import router as home_router
+from routes.report import router as report_router
+from routes.upload import router as upload_router
 from fastapi.staticfiles import StaticFiles
 
 def create_app():

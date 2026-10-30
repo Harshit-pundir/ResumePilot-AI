@@ -1,5 +1,6 @@
-from flask import Blueprint, current_app, jsonify, request
-
+from fastapi import APIRouter , File , UploadFile , Form
+from fastapi.requests import Request
+from fastapi.responses import JSONResponse 
 import extensions
 from services.contact_service import extract_contact_details
 from services.feedback_service import generate_feedback, generate_resume_feedback, generate_score_feedback
@@ -10,9 +11,9 @@ from services.section_extractor import extract_resume_sections
 from services.skills_service import extract_skills, load_skills, match_skills
 from utils.logger import get_logger
 
-upload_bp = Blueprint("upload", __name__)
-logger = get_logger(__name__)
 
+logger = get_logger(__name__)
+router = APIRouter()
 
 def save_resume_history(supabase, file, mode, score, section_score, contact_score, completeness_score):
     history_record = {
@@ -41,7 +42,7 @@ def process_job_match(job_description, known_skills, resume_skills, sections, co
         error_response = {
             "error": "No recognizable technical skills found in the job description."
         }
-        return error_response, 400
+        return JSONResponse(error_response, 400)
 
     matched_skills, missing_skills = match_skills(resume_skills, jd_skills)
     skill_score = calculate_skill_score(matched_skills, jd_skills)
@@ -77,7 +78,7 @@ def process_job_match(job_description, known_skills, resume_skills, sections, co
         "contact_details": contact_details,
         "feedback": feedback,
     }
-    return response_payload, 200
+    return JSONResponse(response_payload, 200)
 
 
 def process_resume_analysis(resume_skills, sections, contact_details, file, section_score, contact_score, completeness_score, supabase):
@@ -133,40 +134,38 @@ def process_resume_analysis(resume_skills, sections, contact_details, file, sect
         "resume_skills": sorted_resume_skills,
         "contact_details": contact_details,
     }
-    return response_payload
+    return JSONResponse(response_payload)
 
 
-@upload_bp.route("/upload", methods=["POST"])
-def upload_resume():
-    file = request.files.get("resume")
-    job_description = request.form.get("job_description", "").strip().lower()
-    if not file:
+@router.post("/upload")
+def upload_resume(resume : UploadFile = File(None) , job_description: str = Form("")):
+    job_description = job_description.strip().lower()
+    if not resume:
         error_response = {"error": "Please upload a resume."}
-        return jsonify(error_response), 400
+        return JSONResponse(error_response, 400)
 
     try:
-        resume_text = extract_text_from_pdf(file)
+        resume_text = extract_text_from_pdf(resume.file)
     except Exception:
         logger.exception("Unable to read the uploaded PDF.")
         error_response = {"error": "Unable to read the uploaded PDF."}
-        return jsonify(error_response), 400
+        return JSONResponse(error_response, 400)
 
     sections = extract_resume_sections(resume_text)
     known_skills = load_skills()
     if not known_skills:
         error_response = {"error": "Skills database could not be loaded."}
-        return jsonify(error_response), 500
+        return JSONResponse(error_response, 500)
 
     resume_skills = extract_skills(resume_text, known_skills)
     contact_details = extract_contact_details(resume_text)
     section_score = calculate_section_score(sections)
     contact_score = calculate_contact_score(contact_details)
     completeness_score = calculate_completeness_score(sections, contact_details)
-    supabase = extensions.get_supabase(current_app)
+    supabase = extensions.supabase
 
     if job_description:
-        response_payload, status_code = process_job_match(job_description, known_skills, resume_skills, sections, contact_details, file, section_score, contact_score, completeness_score, supabase)
-        return jsonify(response_payload), status_code
+        return process_job_match(job_description, known_skills, resume_skills, sections, contact_details, resume, section_score, contact_score, completeness_score, supabase)
 
-    response_payload = process_resume_analysis(resume_skills, sections, contact_details, file, section_score, contact_score, completeness_score, supabase)
-    return jsonify(response_payload)
+
+    return process_resume_analysis(resume_skills, sections, contact_details, resume, section_score, contact_score, completeness_score, supabase)
