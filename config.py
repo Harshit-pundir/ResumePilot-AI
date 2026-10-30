@@ -4,7 +4,7 @@ from dotenv import load_dotenv
 
 
 # Reads variables from .env before any application configuration is accessed.
-load_dotenv()
+load_dotenv(override=True)
 
 SECRET_KEY = os.getenv("SECRET_KEY")
 SUPABASE_URL = os.getenv("SUPABASE_URL")
