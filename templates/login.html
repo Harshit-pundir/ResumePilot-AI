@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Log in | ATS Resume Analyzer</title>
+    <link rel="stylesheet" href="{{ url_for('static', path='css/history.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', path='css/auth.css') }}">
+</head>
+
+<body>
+    <nav class="site-nav" aria-label="Main navigation">
+        <a class="brand" href="/" aria-label="ATS Resume Analyzer home">
+            <span class="brand-mark" aria-hidden="true">A</span>
+            <span>ATS Analyzer</span>
+        </a>
+        <a class="home-btn" href="/">Home</a>
+    </nav>
+
+    <main class="auth-main">
+        <section class="auth-card" aria-labelledby="login-title">
+            <header class="auth-card__header">
+                <p class="eyebrow">Welcome back</p>
+                <h1 id="login-title">Log in to your account</h1>
+                <p>Pick up where you left off and keep your resume analysis moving.</p>
+            </header>
+
+            {% if error %}
+            <div class="auth-error" role="alert">{{ error }}</div>
+            {% endif %}
+
+            <form class="auth-form" action="/auth/login" method="post">
+                <div class="auth-field">
+                    <label for="email">Email</label>
+                    <input id="email" name="email" type="email" value="{{ email | default('', true) }}"
+                        autocomplete="email" required>
+                </div>
+                <div class="auth-field">
+                    <label for="password">Password</label>
+                    <input id="password" name="password" type="password" autocomplete="current-password"
+                        minlength="8" required>
+                </div>
+                <button class="auth-submit" type="submit">Log in</button>
+            </form>
+
+            <p class="auth-switch">New to ATS Analyzer? <a href="/register">Create an account</a></p>
+        </section>
+    </main>
+</body>
+
+</html>
