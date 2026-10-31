@@ -4,130 +4,216 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ATS Resume Score Checker</title>
+    <meta name="theme-color" content="#f0ece5">
+    <title>ResumePilot AI | Make Your Resume Stand Out</title>
     <link rel="stylesheet" href="{{ url_for('static', path='css/style.css') }}">
 </head>
 
-<body>
+<body class="landing-page">
     <nav class="site-nav" aria-label="Main navigation">
-        <a class="brand" href="/" aria-label="ATS Resume Analyzer home">
-            <span class="brand-mark">A</span>
-            <span>ATS Analyzer</span>
+        <a class="brand" href="/" aria-label="ResumePilot AI home">
+            <span class="brand-mark" aria-hidden="true">R</span>
+            <span>ResumePilot <strong>AI</strong></span>
         </a>
         <div class="nav-links">
-            <a href="#checker">Resume</a>
-            <a href="#result">Score</a>
+            <a href="#features">Features</a>
+            <a href="#checker">Resume Review</a>
             <a href="#job_description">Job Match</a>
         </div>
-        <a class="nav-action" href="/history">Analysis History</a>
+        <div class="nav-account">
+            <a class="nav-history" href="/history">Analysis History</a>
+            {% if user %}
+            <span class="nav-user-email" title="{{ user.email }}">{{ user.email }}</span>
+            <form class="nav-logout-form" action="/auth/logout" method="post">
+                <button class="nav-login nav-logout" type="submit">Log out</button>
+            </form>
+            {% else %}
+            <a class="nav-login" href="/login">Log in</a>
+            <a class="nav-register" href="/register">Get started</a>
+            {% endif %}
+        </div>
     </nav>
 
     <main>
-        <section class="hero" id="checker">
+        <section class="hero" id="checker" aria-labelledby="hero-title">
             <div class="hero-copy">
-                <p class="eyebrow">Resume Checker</p>
-                <h1>Is your resume good enough?</h1>
-                <p class="hero-text">
-                    Get an AI-powered ATS score, identify missing skills, and see practical fixes that can improve your
-                    chances of landing interviews.
-                </p>
+                <p class="eyebrow"><span class="eyebrow-mark" aria-hidden="true"></span> AI-powered resume analysis</p>
+                <h1 id="hero-title">Make Your Resume<br>Stand Out. <span>Get Hired Faster.</span></h1>
+                <p class="hero-text">Understand your resume through an ATS recruiter's eyes. Discover missing skills, improve your resume, and get actionable AI-powered recommendations.</p>
+                <div class="hero-actions">
+                    <a class="button button-primary" href="#resume-form">Get Started for Free <span aria-hidden="true">→</span></a>
+                    <a class="button button-outline" href="#features">Explore Features</a>
+                </div>
+                <div class="trust-row" aria-label="ResumePilot benefits">
+                    <span><span class="trust-check" aria-hidden="true">✓</span> Private by design</span>
+                    <span><span class="trust-check" aria-hidden="true">✓</span> Clear, actionable feedback</span>
+                </div>
+            </div>
 
-                <form id="resume-form" class="upload-panel">
+            <div class="hero-visual" aria-label="Sample ResumePilot analysis dashboard">
+                <div class="hero-glow" aria-hidden="true"></div>
+                <article class="hero-report">
+                    <div class="report-topline">
+                        <span class="report-brand"><span class="brand-mark" aria-hidden="true">R</span> ResumePilot</span>
+                        <span class="sample-label">Sample analysis</span>
+                    </div>
+                    <div class="report-overview">
+                        <div class="report-score" aria-label="Sample ATS score 82 percent">
+                            <div class="report-score-inner"><strong>82</strong><span>ATS SCORE</span></div>
+                        </div>
+                        <div class="report-score-copy">
+                            <span class="report-kicker">Resume overview</span>
+                            <h2>Strong foundation</h2>
+                            <p>Review the details that shape your first impression.</p>
+                        </div>
+                    </div>
+                    <div class="report-metrics">
+                        <div><span>Contact details</span><strong>92%</strong><i><b style="width:92%"></b></i></div>
+                        <div><span>Resume sections</span><strong>80%</strong><i><b style="width:80%"></b></i></div>
+                        <div><span>Skill match</span><strong>76%</strong><i><b style="width:76%"></b></i></div>
+                    </div>
+                    <div class="report-bottom">
+                        <div class="report-keywords">
+                            <span class="report-kicker">Keywords to review</span>
+                            <div class="keyword-pills"><span>Leadership</span><span>SQL</span><span>Planning</span></div>
+                        </div>
+                        <div class="report-note"><span aria-hidden="true">✦</span><div><strong>One clear next step</strong><p>Add measurable outcomes to your recent experience.</p></div></div>
+                    </div>
+                    <p class="sample-disclaimer">Illustrative preview · Your results depend on your resume and target role.</p>
+                </article>
+            </div>
+        </section>
+
+        <section class="analyzer-section" aria-labelledby="analyzer-title">
+            <div class="section-heading analyzer-heading">
+                <p class="eyebrow">A thoughtful first step</p>
+                <h2 id="analyzer-title">Your Next Opportunity Starts<br>With a Better Resume.</h2>
+                <p>Upload your resume and get a detailed ATS analysis in seconds.</p>
+            </div>
+            <form id="resume-form" class="upload-panel">
+                <div class="upload-heading">
+                    <span class="upload-heading-icon" aria-hidden="true">↑</span>
+                    <div><strong>Upload your resume</strong><small>We'll take it from here.</small></div>
+                </div>
+                <div class="upload-form-grid">
                     <label for="resume" class="upload-box" id="upload-box">
                         <input type="file" id="resume" name="resume" accept=".pdf" hidden>
-                        <span class="upload-icon" aria-hidden="true">PDF</span>
-                        <strong>Drop your resume here or choose a file.</strong>
-                        <small id="file-help">PDF only. Max 5MB file size.</small>
+                        <span class="upload-icon" aria-hidden="true"><svg viewBox="0 0 32 32" focusable="false"><path d="M16 21V5m0 0-6 6m6-6 6 6M6 20v6h20v-6"/></svg></span>
+                        <span class="upload-instructions"><strong>Drop your resume here</strong><span>or browse files from your device</span><small id="file-help" role="status" aria-live="polite">PDF · Maximum size 5 MB</small></span>
                     </label>
-
-                    <label class="field-label" for="job_description">Job description <span>(optional)</span></label>
-                    <textarea id="job_description" name="job_description" rows="6"
-                        placeholder="Paste a job description to check keyword match..."></textarea>
-
-                    <button type="submit" id="submit-btn">Check Your Score</button>
-                    <p class="privacy-note">Privacy guaranteed. Your resume is only used for this analysis.</p>
-                </form>
-            </div>
-
-            <div class="hero-visual" aria-label="Resume score preview">
-                <div class="mock-browser">
-                    <div class="mock-topbar">
-                        <span></span>
-                        <span></span>
-                        <span></span>
-                    </div>
-                    <div class="score-dashboard">
-                        <aside class="score-sidebar">
-                            <div class="mini-logo">ATS</div>
-                            <div class="gauge">
-                                <span>82</span>
-                                <small>Good</small>
-                            </div>
-                            <ul>
-                                <li class="ok">Contact Info</li>
-                                <li class="warn">Summary</li>
-                                <li class="ok">Skills</li>
-                                <li class="bad">Work History</li>
-                            </ul>
-                        </aside>
-                        <section class="resume-preview">
-                            <div class="preview-heading">
-                                <span>Content</span>
-                                <strong>ATS Parse Rate</strong>
-                            </div>
-                            <div class="line wide"></div>
-                            <div class="line medium"></div>
-                            <div class="line"></div>
-                            <div class="score-meter">
-                                <span style="width: 78%"></span>
-                                <b></b>
-                            </div>
-                            <div class="recommendation-card">
-                                <strong>Top recommendations</strong>
-                                <p>Quantify achievements, add missing keywords, and keep section titles simple.</p>
-                            </div>
-                        </section>
+                    <div class="upload-fields">
+                        <label class="field-label" for="job_description">Target Job Description <span>(Optional)</span></label>
+                        <textarea id="job_description" name="job_description" rows="5" placeholder="Paste the job description here to check how well your resume matches the role..."></textarea>
+                        <button class="button button-primary analyze-button" type="submit" id="submit-btn">Analyze My Resume <span aria-hidden="true">→</span></button>
                     </div>
                 </div>
+                <div class="selected-file" id="selected-file" hidden>
+                    <span class="selected-file-icon" aria-hidden="true">PDF</span>
+                    <span class="selected-file-copy"><strong id="selected-file-name"></strong><small id="selected-file-size"></small></span>
+                    <button class="text-button remove-file" id="remove-resume" type="button">Remove file</button>
+                </div>
+                <p class="privacy-note"><span aria-hidden="true">✳</span> Your resume is processed securely and used only for analysis.</p>
+            </form>
+        </section>
+
+        <section id="loader" class="status-card hidden" role="status" aria-live="polite">
+            <span class="spinner" aria-hidden="true"></span>
+            <div><h2>Analyzing your resume...</h2><p>Checking structure, contact details, sections, and keyword fit.</p></div>
+        </section>
+        <section id="result" class="result-section hidden" aria-live="polite"></section>
+
+        <section class="how-section" id="how-it-works" aria-labelledby="how-title">
+            <div class="section-heading">
+                <p class="eyebrow">Simple by design</p>
+                <h2 id="how-title">Three steps to a stronger application.</h2>
+            </div>
+            <div class="steps-grid">
+                <article class="step-card"><span class="step-number">01</span><span class="step-icon" aria-hidden="true">↑</span><h3>Upload Your Resume</h3><p>Share a PDF and, if you have one, the job description you're targeting.</p></article>
+                <article class="step-card"><span class="step-number">02</span><span class="step-icon" aria-hidden="true">⌕</span><h3>Analyze With AI</h3><p>Review the structure, skills, completeness, and job match in one place.</p></article>
+                <article class="step-card"><span class="step-number">03</span><span class="step-icon" aria-hidden="true">↗</span><h3>Improve and Get Shortlisted</h3><p>Use practical recommendations to make your experience easier to see.</p></article>
             </div>
         </section>
 
-        <section id="loader" class="status-card hidden">
-            <div class="spinner"></div>
-            <h2>Analyzing your resume...</h2>
-            <p>Checking structure, contact details, sections, and keyword fit.</p>
+        <section class="product-section" aria-labelledby="product-title">
+            <div class="product-intro">
+                <p class="eyebrow">A closer look</p>
+                <h2 id="product-title">Useful insight.<br>All in one view.</h2>
+                <p>See the details behind your score, from resume completeness to the skills a role is asking for.</p>
+                <a class="text-link" href="#resume-form">Explore your resume analysis <span aria-hidden="true">→</span></a>
+            </div>
+            <article class="product-dashboard" aria-label="Illustrative sample analysis dashboard">
+                <header class="dashboard-bar">
+                    <span class="dashboard-brand"><span class="dashboard-mark">R</span> ResumePilot</span>
+                    <span class="dashboard-context">Sample report <span class="dashboard-dot"></span> Resume analysis</span>
+                    <span class="dashboard-menu" aria-hidden="true">•••</span>
+                </header>
+                <div class="dashboard-content">
+                    <aside class="dashboard-sidebar">
+                        <span class="dashboard-side-label">YOUR REPORT</span>
+                        <span class="dashboard-nav-item is-active"><i></i>Overview</span>
+                        <span class="dashboard-nav-item"><i></i>Skills & keywords</span>
+                        <span class="dashboard-nav-item"><i></i>Resume sections</span>
+                        <span class="dashboard-nav-item"><i></i>Recommendations</span>
+                        <div class="dashboard-side-foot"><span>Sample report preview</span><small>Example values shown</small></div>
+                    </aside>
+                    <div class="dashboard-main">
+                        <div class="dashboard-title-row"><div><span class="dashboard-side-label">RESUME OVERVIEW</span><h3>Your analysis</h3></div><span class="dashboard-status">Analysis complete</span></div>
+                        <div class="dashboard-stat-grid">
+                            <div class="dashboard-stat dashboard-stat-score"><span>ATS score</span><strong>82<small>/100</small></strong><div class="dashboard-score-track"><i></i></div></div>
+                            <div class="dashboard-stat"><span>Skill match</span><strong>76<small>%</small></strong><small>Against target role</small></div>
+                            <div class="dashboard-stat"><span>Completeness</span><strong>88<small>%</small></strong><small>Resume sections</small></div>
+                            <div class="dashboard-stat"><span>Contact details</span><strong>92<small>%</small></strong><small>Easy to identify</small></div>
+                        </div>
+                        <div class="dashboard-detail-grid">
+                            <section class="dashboard-panel"><div class="dashboard-panel-head"><h4>Resume sections</h4><span>5 key areas</span></div><div class="section-bars"><div><span>Experience</span><i><b style="width:90%"></b></i><strong>Strong</strong></div><div><span>Skills</span><i><b style="width:72%"></b></i><strong>Review</strong></div><div><span>Education</span><i><b style="width:100%"></b></i><strong>Complete</strong></div><div><span>Summary</span><i><b style="width:48%"></b></i><strong>Improve</strong></div></div></section>
+                            <section class="dashboard-panel"><div class="dashboard-panel-head"><h4>Skills & keywords</h4><span>Role comparison</span></div><div class="dashboard-match"><div class="match-ring"><span>76<small>%</small></span></div><p>Skills aligned with target role</p></div><div class="dashboard-keywords"><span>Matched</span><div><i>Project planning</i><i>SQL</i><i>Reporting</i></div><span>To consider</span><div><i class="keyword-missing">Forecasting</i><i class="keyword-missing">Leadership</i></div></div></section>
+                        </div>
+                        <div class="dashboard-recommendation"><span class="recommendation-spark" aria-hidden="true">✳</span><div><strong>Make your impact easier to see</strong><p>Use specific outcomes to show the value of your recent work.</p></div><span class="recommendation-arrow" aria-hidden="true">↗</span></div>
+                        <p class="dashboard-disclaimer">Illustrative product preview. Values are examples, not live analysis data.</p>
+                    </div>
+                </div>
+            </article>
         </section>
 
-        <section id="result" class="result-section hidden" aria-live="polite"></section>
+        <section class="features-section" id="features" aria-labelledby="features-title">
+            <div class="section-heading features-heading">
+                <p class="eyebrow">Made for your next move</p>
+                <h2 id="features-title">Everything You Need to Make<br>Your Resume Better.</h2>
+                <p>Clear, useful insight at every step of your resume review.</p>
+            </div>
+            <div class="feature-grid">
+                <article class="feature-card"><span class="feature-icon" aria-hidden="true">◌</span><span class="feature-index">01 / ANALYSIS</span><h3>ATS Resume Analysis</h3><p>Understand your overall score, resume sections, and completeness at a glance.</p><a href="#resume-form" aria-label="Start ATS resume analysis">Explore analysis <span aria-hidden="true">→</span></a></article>
+                <article class="feature-card"><span class="feature-icon" aria-hidden="true">⌕</span><span class="feature-index">02 / MATCHING</span><h3>Intelligent Job Matching</h3><p>Compare your resume with a job description and find missing skills and keywords.</p><a href="#job_description">Explore job matching <span aria-hidden="true">→</span></a></article>
+                <article class="feature-card"><span class="feature-icon" aria-hidden="true">✳</span><span class="feature-index">03 / COACHING</span><h3>AI-Powered Recommendations</h3><p>Get actionable suggestions to improve the quality and presentation of your resume.</p><a href="#resume-form">Explore recommendations <span aria-hidden="true">→</span></a></article>
+                <article class="feature-card"><span class="feature-icon" aria-hidden="true">↺</span><span class="feature-index">04 / PROGRESS</span><h3>Analysis History</h3><p>Return to previous resume checks and keep track of your progress over time.</p><a href="/history">View analysis history <span aria-hidden="true">→</span></a></article>
+                <article class="feature-card"><span class="feature-icon" aria-hidden="true">⌗</span><span class="feature-index">05 / INSIGHTS</span><h3>Detailed Resume Insights</h3><p>Review contact, skill, section, and completeness scores with helpful context.</p><a href="#product-title">See the product <span aria-hidden="true">→</span></a></article>
+                <article class="feature-card"><span class="feature-icon" aria-hidden="true">↓</span><span class="feature-index">06 / REPORTING</span><h3>PDF Reports</h3><p>Download an ATS report of your completed analysis to reference and share.</p><a href="#resume-form">Create an analysis <span aria-hidden="true">→</span></a></article>
+            </div>
+        </section>
+
+        <section class="closing-cta" aria-labelledby="closing-cta-title">
+            <div class="closing-glow" aria-hidden="true"></div>
+            <div class="closing-content"><p class="eyebrow">Your next opportunity starts here</p><h2 id="closing-cta-title">Your Next Opportunity<br>Starts Here.</h2><p>Give your resume the attention it deserves.</p><a class="button button-primary" href="#resume-form">Analyze My Resume <span aria-hidden="true">→</span></a></div>
+        </section>
     </main>
 
-    <footer>
-        <p>© 2026 Harshit Pundir · ATS Resume Analyzer</p>
+    <footer class="site-footer">
+        <div class="footer-main">
+            <div class="footer-about"><a class="brand" href="/" aria-label="ResumePilot AI home"><span class="brand-mark" aria-hidden="true">R</span><span>ResumePilot <strong>AI</strong></span></a><p>A clearer, more confident way to understand and improve your resume.</p></div>
+            <div class="footer-column"><h2>Explore</h2><a href="#features">Features</a><a href="#checker">Resume Review</a><a href="#job_description">Job Match</a></div>
+            <div class="footer-column"><h2>Your account</h2><a href="/history">Analysis History</a><a href="/login">Log In</a><a href="/register">Register</a></div>
+        </div>
+        <div class="footer-bottom"><span>© 2026 ResumePilot AI</span><a href="#checker">Back to top ↑</a></div>
     </footer>
 
-    <div class="ai-modal hidden" id="ai-improve-modal" role="dialog" aria-modal="true"
-        aria-labelledby="ai-improve-title" aria-describedby="ai-improve-content">
+    <div class="ai-modal hidden" id="ai-improve-modal" role="dialog" aria-modal="true" aria-labelledby="ai-improve-title" aria-describedby="ai-improve-content">
         <div class="ai-modal__backdrop" data-modal-close></div>
         <section class="ai-modal__dialog" role="document">
-            <header class="ai-modal__header">
-                <div>
-                    <p class="eyebrow">AI Resume Coach</p>
-                    <h2 id="ai-improve-title">Resume improvement suggestions</h2>
-                </div>
-                <button type="button" class="ai-modal__close" data-modal-close
-                    aria-label="Close suggestions">&times;</button>
-            </header>
+            <header class="ai-modal__header"><div><p class="eyebrow">AI Resume Coach</p><h2 id="ai-improve-title">Resume improvement suggestions</h2></div><button type="button" class="ai-modal__close" data-modal-close aria-label="Close suggestions">×</button></header>
             <div class="ai-modal__content" id="ai-improve-content" tabindex="0"></div>
-            <footer class="ai-modal__footer">
-                <button type="button" class="copy-suggestions-button" id="copy-suggestions-btn">Copy AI
-                    Suggestions</button>
-                <button type="button" class="download-suggestions-button" id="download-suggestions-btn">Download
-                    PDF</button>
-                <button type="button" class="analyze-again-button" data-modal-close>Close</button>
-            </footer>
+            <footer class="ai-modal__footer"><button type="button" class="copy-suggestions-button" id="copy-suggestions-btn">Copy AI Suggestions</button><button type="button" class="download-suggestions-button" id="download-suggestions-btn">Download PDF</button><button type="button" class="analyze-again-button" data-modal-close>Close</button></footer>
         </section>
     </div>
-
     <div class="toast hidden" id="toast" role="status" aria-live="polite"></div>
     <script src="https://cdn.jsdelivr.net/npm/dompurify@3.2.6/dist/purify.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>

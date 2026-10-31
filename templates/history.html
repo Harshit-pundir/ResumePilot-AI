@@ -6,6 +6,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Analysis History | ATS Resume Analyzer</title>
     <link rel="stylesheet" href="{{ url_for('static', path='css/history.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', path='css/auth.css') }}">
 </head>
 
 <body>
@@ -14,7 +15,19 @@
             <span class="brand-mark">A</span>
             <span>ATS Analyzer</span>
         </a>
-        <a class="home-btn" href="/">Home</a>
+        <div class="nav-account">
+            <a class="home-btn" href="/">Home</a>
+            <a class="home-btn" href="/history" aria-current="page">Analysis History</a>
+            {% if user %}
+            <span class="nav-user-email" title="{{ user.email }}">{{ user.email }}</span>
+            <form class="nav-logout-form" action="/auth/logout" method="post">
+                <button class="home-btn nav-logout nav-logout-home" type="submit">Logout</button>
+            </form>
+            {% else %}
+            <a class="home-btn" href="/login">Login</a>
+            <a class="home-btn" href="/register">Register</a>
+            {% endif %}
+        </div>
     </nav>
 
     <main>
