@@ -4,8 +4,10 @@ from fastapi.templating import Jinja2Templates
 
 from config import COOKIE_SECURE
 from extensions import supabase
-from security import create_token, hash_password, verify_password
+from routes.security import create_token, hash_password, verify_password
 from utils.constants import EXPIRE_MINUTES
+
+from postgrest.exceptions import APIError
 
 router = APIRouter()
 templates = Jinja2Templates(directory="templates")
@@ -60,10 +62,21 @@ def register_user(
             request, "register.html", {"error": error, "email": email}, status_code=400
         )
 
-    new_user = supabase.table("users").insert(
-        {"email": email, "password_hash": hash_password(password)}
-    ).execute()
+    try:
+        new_user = supabase.table("users").insert(
+            {"email": email, "password_hash": hash_password(password)}
+        ).execute()
+    except APIError as e:
+        if "23505" in str(e):  # email pehle se hai
+            return templates.TemplateResponse(
+                request, "register.html",
+                {"error": "An account with this email already exists.", "email": email},
+                status_code=400,
+            )
+        raise
+
     return login_and_redirect(new_user.data[0]["id"])
+    
 
 
 @router.post("/auth/login", response_class=HTMLResponse)
