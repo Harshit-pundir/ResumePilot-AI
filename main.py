@@ -4,6 +4,7 @@ from routes.ai import router as ai_router
 from routes.home import router as home_router
 from routes.report import router as report_router
 from routes.upload import router as upload_router
+from routes.auth import router as auth_router
 from fastapi.staticfiles import StaticFiles
 
 def create_app():
@@ -19,7 +20,8 @@ def create_app():
     app.include_router(home_router)
     app.include_router(report_router)
     app.include_router(upload_router)
-    
+    app.include_router(auth_router)
+   
     return app
 
 app = create_app()
