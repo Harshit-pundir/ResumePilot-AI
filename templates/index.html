@@ -1,138 +1,181 @@
-<!DOCTYPE html>
-<html lang="en">
+{% extends "base.html" %}
 
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ATS Resume Score Checker</title>
-    <link rel="stylesheet" href="{{ url_for('static', path='css/style.css') }}">
-</head>
+{% block title %}ResumePilot AI · ATS Resume Analyzer & Score Checker{% endblock %}
 
-<body>
-    <nav class="site-nav" aria-label="Main navigation">
-        <a class="brand" href="/" aria-label="ATS Resume Analyzer home">
-            <span class="brand-mark">A</span>
-            <span>ATS Analyzer</span>
-        </a>
-        <div class="nav-links">
-            <a href="#checker">Resume</a>
-            <a href="#result">Score</a>
-            <a href="#job_description">Job Match</a>
-        </div>
-        <a class="nav-action" href="/history">Analysis History</a>
-    </nav>
+{% block content %}
+<section class="hero-section" id="upload-section">
+    <div class="container">
+        <div class="hero-grid">
+            <div class="hero-content">
+                <div class="eyebrow-tag">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                        <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon>
+                    </svg>
+                    <span>ATS Resume Analyzer</span>
+                </div>
 
-    <main>
-        <section class="hero" id="checker">
-            <div class="hero-copy">
-                <p class="eyebrow">Resume Checker</p>
-                <h1>Is your resume good enough?</h1>
-                <p class="hero-text">
-                    Get an AI-powered ATS score, identify missing skills, and see practical fixes that can improve your
-                    chances of landing interviews.
+                <h1 class="hero-title">
+                    Evaluate your resume for <span class="highlight">modern ATS filters</span>
+                </h1>
+
+                <p class="hero-lead">
+                    Extract technical skills, check critical resume sections, and compare your profile against target job descriptions for higher shortlist rates.
                 </p>
 
-                <form id="resume-form" class="upload-panel">
-                    <label for="resume" class="upload-box" id="upload-box">
-                        <input type="file" id="resume" name="resume" accept=".pdf" hidden>
-                        <span class="upload-icon" aria-hidden="true">PDF</span>
-                        <strong>Drop your resume here or choose a file.</strong>
-                        <small id="file-help">PDF only. Max 5MB file size.</small>
-                    </label>
-
-                    <label class="field-label" for="job_description">Job description <span>(optional)</span></label>
-                    <textarea id="job_description" name="job_description" rows="6"
-                        placeholder="Paste a job description to check keyword match..."></textarea>
-
-                    <button type="submit" id="submit-btn">Check Your Score</button>
-                    <p class="privacy-note">Privacy guaranteed. Your resume is only used for this analysis.</p>
-                </form>
-            </div>
-
-            <div class="hero-visual" aria-label="Resume score preview">
-                <div class="mock-browser">
-                    <div class="mock-topbar">
-                        <span></span>
-                        <span></span>
-                        <span></span>
+                <div class="hero-feature-pills">
+                    <div class="feature-pill">
+                        <svg class="feature-pill-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                            <polyline points="20 6 9 17 4 12"></polyline>
+                        </svg>
+                        <span>spaCy NLP Skill Extraction</span>
                     </div>
-                    <div class="score-dashboard">
-                        <aside class="score-sidebar">
-                            <div class="mini-logo">ATS</div>
-                            <div class="gauge">
-                                <span>82</span>
-                                <small>Good</small>
-                            </div>
-                            <ul>
-                                <li class="ok">Contact Info</li>
-                                <li class="warn">Summary</li>
-                                <li class="ok">Skills</li>
-                                <li class="bad">Work History</li>
-                            </ul>
-                        </aside>
-                        <section class="resume-preview">
-                            <div class="preview-heading">
-                                <span>Content</span>
-                                <strong>ATS Parse Rate</strong>
-                            </div>
-                            <div class="line wide"></div>
-                            <div class="line medium"></div>
-                            <div class="line"></div>
-                            <div class="score-meter">
-                                <span style="width: 78%"></span>
-                                <b></b>
-                            </div>
-                            <div class="recommendation-card">
-                                <strong>Top recommendations</strong>
-                                <p>Quantify achievements, add missing keywords, and keep section titles simple.</p>
-                            </div>
-                        </section>
+                    <div class="feature-pill">
+                        <svg class="feature-pill-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                            <polyline points="20 6 9 17 4 12"></polyline>
+                        </svg>
+                        <span>Multi-factor ATS Scoring</span>
+                    </div>
+                    <div class="feature-pill">
+                        <svg class="feature-pill-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                            <polyline points="20 6 9 17 4 12"></polyline>
+                        </svg>
+                        <span>Groq AI Resume Coach</span>
                     </div>
                 </div>
             </div>
-        </section>
 
-        <section id="loader" class="status-card hidden">
-            <div class="spinner"></div>
-            <h2>Analyzing your resume...</h2>
-            <p>Checking structure, contact details, sections, and keyword fit.</p>
-        </section>
+            <!-- Main Upload Action Card (Visible without scrolling) -->
+            <div class="hero-card-col">
+                <div class="upload-card">
+                    <div class="upload-card-header">
+                        <h2 class="upload-card-title">Check Resume Score</h2>
+                        <p class="upload-card-subtitle">Upload your PDF resume to receive immediate ATS feedback.</p>
+                    </div>
 
-        <section id="result" class="result-section hidden" aria-live="polite"></section>
-    </main>
+                    <form id="resume-form" class="upload-form" novalidate>
+                        <!-- Hidden native file input -->
+                        <input type="file" id="resume" name="resume" accept=".pdf" class="hidden">
 
-    <footer>
-        <p>© 2026 Harshit Pundir · ATS Resume Analyzer</p>
-    </footer>
+                        <!-- Interactive Dropzone -->
+                        <div class="dropzone" id="upload-box" role="button" tabindex="0" aria-label="Upload PDF resume. Drag and drop file or press Enter to browse.">
+                            <div class="dropzone-inner">
+                                <div class="dropzone-icon" aria-hidden="true">
+                                    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                                        <polyline points="17 8 12 3 7 8"></polyline>
+                                        <line x1="12" y1="3" x2="12" y2="15"></line>
+                                    </svg>
+                                </div>
+                                <p class="dropzone-prompt">
+                                    <span>Drag &amp; drop your resume or</span> <span class="browse-link">browse</span>
+                                </p>
+                                <p class="dropzone-hint" id="file-help">PDF only · Max 5MB file size</p>
+                            </div>
+                        </div>
 
-    <div class="ai-modal hidden" id="ai-improve-modal" role="dialog" aria-modal="true"
-        aria-labelledby="ai-improve-title" aria-describedby="ai-improve-content">
-        <div class="ai-modal__backdrop" data-modal-close></div>
-        <section class="ai-modal__dialog" role="document">
-            <header class="ai-modal__header">
-                <div>
-                    <p class="eyebrow">AI Resume Coach</p>
-                    <h2 id="ai-improve-title">Resume improvement suggestions</h2>
+                        <!-- Selected File Display Chip -->
+                        <div class="file-chip hidden" id="selected-file-chip" aria-live="polite">
+                            <div class="file-chip-info">
+                                <svg class="file-chip-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                                    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                                    <polyline points="14 2 14 8 20 8"></polyline>
+                                </svg>
+                                <div class="file-chip-text">
+                                    <span class="file-chip-name" id="chip-filename">resume.pdf</span>
+                                    <span class="file-chip-size" id="chip-filesize">0 KB</span>
+                                </div>
+                            </div>
+                            <button type="button" class="file-chip-remove" id="chip-remove-btn" aria-label="Remove selected file">
+                                <span>Remove</span>
+                                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                                    <line x1="18" y1="6" x2="6" y2="18"></line>
+                                    <line x1="6" y1="6" x2="18" y2="18"></line>
+                                </svg>
+                            </button>
+                        </div>
+
+                        <!-- Job Description Textarea (Optional) -->
+                        <div class="field-group">
+                            <label class="field-label" for="job_description">
+                                <span>Job Description</span>
+                                <span class="field-optional">(optional for keyword match)</span>
+                            </label>
+                            <textarea id="job_description" name="job_description" rows="3" class="field-textarea"
+                                placeholder="Paste the target job description to analyze missing keywords and matching skills..."></textarea>
+                        </div>
+
+                        <!-- Submit Button -->
+                        <button type="submit" class="btn btn-primary upload-submit-btn" id="submit-btn">
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                                <circle cx="11" cy="11" r="8"></circle>
+                                <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+                            </svg>
+                            <span>Check Your Score</span>
+                        </button>
+
+                        <p class="upload-privacy-note">
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                                <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
+                                <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
+                            </svg>
+                            <span>Private &amp; secure · Files are processed without being saved</span>
+                        </p>
+                    </form>
                 </div>
-                <button type="button" class="ai-modal__close" data-modal-close
-                    aria-label="Close suggestions">&times;</button>
-            </header>
-            <div class="ai-modal__content" id="ai-improve-content" tabindex="0"></div>
-            <footer class="ai-modal__footer">
-                <button type="button" class="copy-suggestions-button" id="copy-suggestions-btn">Copy AI
-                    Suggestions</button>
-                <button type="button" class="download-suggestions-button" id="download-suggestions-btn">Download
-                    PDF</button>
-                <button type="button" class="analyze-again-button" data-modal-close>Close</button>
-            </footer>
-        </section>
+            </div>
+        </div>
     </div>
+</section>
 
-    <div class="toast hidden" id="toast" role="status" aria-live="polite"></div>
-    <script src="https://cdn.jsdelivr.net/npm/dompurify@3.2.6/dist/purify.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.2/dist/jspdf.umd.min.js"></script>
-    <script src="{{ url_for('static', path='js/script.js') }}"></script>
-</body>
+<!-- Loader Card State -->
+<div class="container">
+    <section id="loader" class="loader-card hidden" role="status" aria-live="polite">
+        <div class="loader-spinner" aria-hidden="true"></div>
+        <h2 class="loader-title">Analyzing your resume...</h2>
+        <p class="loader-desc">Evaluating sections, contact information, and skill keyword alignment.</p>
+    </section>
+</div>
 
-</html>
+<!-- Dynamic Results Section -->
+<div class="container">
+    <section id="result" class="results-section hidden" aria-live="polite"></section>
+</div>
+
+<!-- AI Suggestions Modal -->
+<div class="modal-overlay hidden" id="ai-improve-modal" role="dialog" aria-modal="true" aria-labelledby="ai-improve-title">
+    <div class="modal-dialog" role="document">
+        <header class="modal-header">
+            <div class="modal-header-text">
+                <div class="eyebrow-tag" style="background: rgba(255,255,255,0.1); border-color: rgba(255,255,255,0.2); color: #5eead4;">
+                    Powered by Groq AI
+                </div>
+                <h3 id="ai-improve-title">Resume Improvement Suggestions</h3>
+            </div>
+            <button type="button" class="modal-close-btn" data-modal-close aria-label="Close suggestions modal">&times;</button>
+        </header>
+
+        <div class="modal-body" id="ai-improve-content" tabindex="0">
+            <!-- Rendered markdown suggestions or loading state -->
+        </div>
+
+        <footer class="modal-footer">
+            <button type="button" class="btn btn-primary btn-sm" id="copy-suggestions-btn">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                    <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+                    <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+                </svg>
+                <span>Copy Suggestions</span>
+            </button>
+            <button type="button" class="btn btn-outline-dark btn-sm" id="download-suggestions-btn">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                    <polyline points="7 10 12 15 17 10"></polyline>
+                    <line x1="12" y1="15" x2="12" y2="3"></line>
+                </svg>
+                <span>Download PDF</span>
+            </button>
+            <button type="button" class="btn btn-ghost btn-sm" data-modal-close>Close</button>
+        </footer>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}ResumePilot AI · ATS Resume Analyzer{% endblock %}</title>
+    <meta name="description" content="Analyze your resume with ATS scoring, detect missing skills, and get targeted recommendations.">
+
+    <!-- Preconnect & Google Font Inter -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+    <!-- Stylesheets with cache busting -->
+    <link rel="stylesheet" href="{{ url_for('static', path='css/style.css') }}?v=4">
+    {% block extra_css %}{% endblock %}
+</head>
+<body>
+    <header class="site-header">
+        <div class="header-container">
+            <a class="brand" href="/" aria-label="ResumePilot AI home">
+                <span class="brand-icon" aria-hidden="true">
+                    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                        <polyline points="14 2 14 8 20 8"></polyline>
+                        <line x1="16" y1="13" x2="8" y2="13"></line>
+                        <line x1="16" y1="17" x2="8" y2="17"></line>
+                        <polyline points="10 9 9 9 8 9"></polyline>
+                    </svg>
+                </span>
+                <span class="brand-name">ResumePilot<span class="brand-accent">AI</span></span>
+            </a>
+
+            <nav class="site-nav" id="desktop-nav" aria-label="Main navigation">
+                <a href="/" class="nav-link {% if request.url.path == '/' %}is-active{% endif %}">Home</a>
+                <a href="/#upload-section" class="nav-link">Check Score</a>
+                <a href="/history" class="nav-link {% if request.url.path == '/history' %}is-active{% endif %}">History</a>
+            </nav>
+
+            <div class="header-actions">
+                {% if user %}
+                <div class="user-profile">
+                    <span class="user-badge" title="{{ user.email }}">
+                        <svg class="user-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                            <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+                            <circle cx="12" cy="7" r="4"></circle>
+                        </svg>
+                        <span class="user-email">{{ user.email }}</span>
+                    </span>
+                    <form method="post" action="/auth/logout" class="logout-form">
+                        <button type="submit" class="btn btn-outline btn-sm logout-btn">Log out</button>
+                    </form>
+                </div>
+                {% else %}
+                <div class="guest-actions">
+                    <a href="/login" class="nav-link auth-link {% if request.url.path == '/login' %}is-active{% endif %}">Log in</a>
+                    <a href="/register" class="btn btn-primary btn-sm">Get Started</a>
+                </div>
+                {% endif %}
+
+                <button type="button" class="mobile-nav-toggle" id="mobile-nav-toggle" aria-expanded="false" aria-controls="mobile-nav-menu" aria-label="Toggle navigation menu">
+                    <span class="toggle-bar"></span>
+                    <span class="toggle-bar"></span>
+                    <span class="toggle-bar"></span>
+                </button>
+            </div>
+        </div>
+
+        <!-- Mobile Drawer Navigation -->
+        <div class="mobile-nav-menu hidden" id="mobile-nav-menu" aria-label="Mobile navigation">
+            <nav class="mobile-links">
+                <a href="/" class="mobile-link {% if request.url.path == '/' %}is-active{% endif %}">Home</a>
+                <a href="/#upload-section" class="mobile-link">Check Score</a>
+                <a href="/history" class="mobile-link {% if request.url.path == '/history' %}is-active{% endif %}">History</a>
+                <hr class="mobile-divider">
+                {% if user %}
+                <div class="mobile-user-info">
+                    <span class="user-email-label">Signed in as</span>
+                    <strong>{{ user.email }}</strong>
+                </div>
+                <form method="post" action="/auth/logout" class="logout-form">
+                    <button type="submit" class="btn btn-outline btn-block">Log out</button>
+                </form>
+                {% else %}
+                <a href="/login" class="mobile-link auth-link">Log in</a>
+                <a href="/register" class="btn btn-primary btn-block">Get Started</a>
+                {% endif %}
+            </nav>
+        </div>
+    </header>
+
+    <main class="page-body{% if request.url.path == '/' %} page-body-home{% endif %}">
+        {% block content %}{% endblock %}
+    </main>
+
+    <footer class="site-footer">
+        <div class="footer-container">
+            <div class="footer-top">
+                <div class="footer-brand">
+                    <div class="brand">
+                        <span class="brand-icon" aria-hidden="true">
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                                <polyline points="14 2 14 8 20 8"></polyline>
+                                <line x1="16" y1="13" x2="8" y2="13"></line>
+                                <line x1="16" y1="17" x2="8" y2="17"></line>
+                            </svg>
+                        </span>
+                        <span class="brand-name">ResumePilot<span class="brand-accent">AI</span></span>
+                    </div>
+                    <p class="footer-tagline">Actionable, transparent ATS analysis to help you land software interviews.</p>
+                </div>
+
+                <div class="footer-privacy-box">
+                    <div class="privacy-badge">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                            <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path>
+                        </svg>
+                        <span>Privacy First</span>
+                    </div>
+                    <p class="privacy-statement">
+                        We don't store your resume file. Only your scores are saved to your history. AI suggestions are generated by sending your resume text to Groq.
+                    </p>
+                </div>
+
+                <div class="footer-nav">
+                    <h4 class="footer-heading">Navigation</h4>
+                    <ul>
+                        <li><a href="/">Home</a></li>
+                        <li><a href="/#upload-section">Score Checker</a></li>
+                        <li><a href="/history">History</a></li>
+                        <li><a href="/login">Log in</a></li>
+                        <li><a href="/register">Sign up</a></li>
+                    </ul>
+                </div>
+            </div>
+
+            <div class="footer-bottom">
+                <p class="copyright">© 2026 ResumePilot AI · Built for job seekers.</p>
+                <div class="footer-meta">
+                    <span>FastAPI + spaCy + Groq</span>
+                </div>
+            </div>
+        </div>
+    </footer>
+
+    <!-- Global Toast Container -->
+    <div class="toast hidden" id="toast" role="status" aria-live="polite"></div>
+
+    <!-- Pinned external scripts -->
+    <script src="https://cdn.jsdelivr.net/npm/dompurify@3.2.6/dist/purify.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.2/dist/jspdf.umd.min.js"></script>
+    <script src="{{ url_for('static', path='js/script.js') }}?v=2"></script>
+    {% block extra_js %}{% endblock %}
+</body>
+</html>
