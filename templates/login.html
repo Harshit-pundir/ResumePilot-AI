@@ -1,52 +1,59 @@
-<!DOCTYPE html>
-<html lang="en">
+{% extends "base.html" %}
 
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Log in | ATS Resume Analyzer</title>
-    <link rel="stylesheet" href="{{ url_for('static', path='css/history.css') }}">
-    <link rel="stylesheet" href="{{ url_for('static', path='css/auth.css') }}">
-</head>
+{% block title %}Log in · ResumePilot AI{% endblock %}
 
-<body>
-    <nav class="site-nav" aria-label="Main navigation">
-        <a class="brand" href="/" aria-label="ATS Resume Analyzer home">
-            <span class="brand-mark" aria-hidden="true">A</span>
-            <span>ATS Analyzer</span>
-        </a>
-        <a class="home-btn" href="/">Home</a>
-    </nav>
+{% block extra_css %}
+<link rel="stylesheet" href="{{ url_for('static', path='css/auth.css') }}?v=2">
+{% endblock %}
 
-    <main class="auth-main">
-        <section class="auth-card" aria-labelledby="login-title">
-            <header class="auth-card__header">
-                <p class="eyebrow">Welcome back</p>
-                <h1 id="login-title">Log in to your account</h1>
-                <p>Pick up where you left off and keep your resume analysis moving.</p>
-            </header>
+{% block content %}
+<div class="auth-wrapper">
+    <div class="auth-card">
+        <header class="auth-header">
+            <div class="auth-badge" aria-hidden="true">
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"></path>
+                    <polyline points="10 17 15 12 10 7"></polyline>
+                    <line x1="15" y1="12" x2="3" y2="12"></line>
+                </svg>
+            </div>
+            <h1 class="auth-title">Welcome back</h1>
+            <p class="auth-subtitle">Sign in to track your ATS resume scores and past reviews.</p>
+        </header>
 
-            {% if error %}
-            <div class="auth-error" role="alert">{{ error }}</div>
-            {% endif %}
+        {% if error %}
+        <div class="auth-error" role="alert">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <circle cx="12" cy="12" r="10"></circle>
+                <line x1="12" y1="8" x2="12" y2="12"></line>
+                <line x1="12" y1="16" x2="12.01" y2="16"></line>
+            </svg>
+            <span>{{ error }}</span>
+        </div>
+        {% endif %}
 
-            <form class="auth-form" action="/auth/login" method="post">
-                <div class="auth-field">
-                    <label for="email">Email</label>
-                    <input id="email" name="email" type="email" value="{{ email | default('', true) }}"
-                        autocomplete="email" required>
-                </div>
-                <div class="auth-field">
-                    <label for="password">Password</label>
-                    <input id="password" name="password" type="password" autocomplete="current-password"
-                        minlength="8" required>
-                </div>
-                <button class="auth-submit" type="submit">Log in</button>
-            </form>
+        <form class="auth-form" action="/auth/login" method="post" id="login-form">
+            <div class="form-group">
+                <label class="form-label" for="email">Email address</label>
+                <input class="form-input" id="email" name="email" type="email"
+                       value="{{ email | default('', true) }}"
+                       autocomplete="email" required placeholder="you@example.com">
+            </div>
 
-            <p class="auth-switch">New to ATS Analyzer? <a href="/register">Create an account</a></p>
-        </section>
-    </main>
-</body>
+            <div class="form-group">
+                <label class="form-label" for="password">Password</label>
+                <input class="form-input" id="password" name="password" type="password"
+                       autocomplete="current-password" minlength="8" required placeholder="••••••••">
+            </div>
 
-</html>
+            <button class="btn btn-primary auth-submit-btn" type="submit" id="login-submit-btn">
+                Log In
+            </button>
+        </form>
+
+        <footer class="auth-footer">
+            <p>New to ResumePilot AI? <a href="/register" class="auth-link-bold">Create an account</a></p>
+        </footer>
+    </div>
+</div>
+{% endblock %}

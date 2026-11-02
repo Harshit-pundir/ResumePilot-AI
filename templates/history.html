@@ -1,121 +1,85 @@
-<!DOCTYPE html>
-<html lang="en">
+{% extends "base.html" %}
 
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Analysis History | ATS Resume Analyzer</title>
-    <link rel="stylesheet" href="{{ url_for('static', path='css/history.css') }}">
-</head>
+{% block title %}Analysis History · ResumePilot AI{% endblock %}
 
-<body>
-    <nav class="site-nav" aria-label="Main navigation">
-        <a class="brand" href="/" aria-label="ATS Resume Analyzer home">
-            <span class="brand-mark">A</span>
-            <span>ATS Analyzer</span>
-        </a>
-        <a class="home-btn" href="/">Home</a>
-    </nav>
+{% block extra_css %}
+<link rel="stylesheet" href="{{ url_for('static', path='css/history.css') }}?v=2">
+{% endblock %}
 
-    <main>
-        <header class="page-header">
-            <p class="eyebrow">Analysis History</p>
-            <h1>Your resume checks, neatly tracked.</h1>
-            <p>Review past resume analysis and job match runs with score breakdowns for structure, contact details, and overall completeness.</p>
+{% block content %}
+<section class="history-section">
+    <div class="container">
+        <header class="history-header">
+            <h1 class="history-title">Resume Analysis History</h1>
+            <p class="history-desc">
+                Review your previous ATS scans, section evaluations, and job description alignment scores.
+            </p>
         </header>
 
-        {% if history %}
-        <section class="history-shell" aria-label="Resume analysis history">
-            <div class="table-wrap">
-                <table>
+        {% if history and history | length > 0 %}
+        <div class="history-card" aria-label="Resume analysis history table">
+            <div class="table-responsive">
+                <table class="history-table">
                     <thead>
                         <tr>
-                            <th>Resume Name</th>
-                            <th>Mode</th>
-                            <th>Score</th>
-                            <th>Section Score</th>
-                            <th>Contact Score</th>
-                            <th>Completeness Score</th>
-                            <th>Date</th>
+                            <th scope="col">Resume File</th>
+                            <th scope="col">Analysis Mode</th>
+                            <th scope="col">Overall Score</th>
+                            <th scope="col">Sections</th>
+                            <th scope="col">Contact</th>
+                            <th scope="col">Completeness</th>
+                            <th scope="col">Date Analyzed</th>
                         </tr>
                     </thead>
                     <tbody>
                         {% for item in history %}
-                        {% set mode_label = 'Job Match' if item.mode == 'job_match' else 'Resume Analysis' %}
-                        {% set score = item.score | default(0, true) %}
+                        {% set mode_is_job = (item.mode == 'job_match') %}
+                        {% set score_val = item.score | default(0, true) %}
                         <tr>
-                            <td class="resume-name">{{ item.resume_name | default('Untitled resume', true) }}</td>
+                            <td class="resume-name-cell" title="{{ item.resume_name | default('Untitled resume', true) }}">
+                                {{ item.resume_name | default('Untitled resume', true) }}
+                            </td>
                             <td>
-                                <span class="mode-badge {{ 'job' if item.mode == 'job_match' else 'resume' }}">
-                                    {{ mode_label }}
+                                <span class="history-badge {{ 'is-job' if mode_is_job else 'is-resume' }}">
+                                    {{ 'Job Match' if mode_is_job else 'Resume Analysis' }}
                                 </span>
                             </td>
-                            <td class="score-cell">
-                                <div class="score-label">
-                                    <span>{{ score }}%</span>
-                                </div>
-                                <div class="score-track" aria-hidden="true">
-                                    <span class="score-fill" data-score="{{ score }}"></span>
+                            <td>
+                                <div class="score-cell-wrap">
+                                    <span class="score-cell-value">{{ score_val }}%</span>
+                                    <div class="history-score-track" aria-hidden="true">
+                                        <span class="history-score-fill {% if score_val >= 75 %}high{% elif score_val >= 45 %}mid{% else %}low{% endif %}"
+                                              style="width: {{ score_val }}%"></span>
+                                    </div>
                                 </div>
                             </td>
-                            <td class="metric">{{ item.section_score | default(0, true) }}%</td>
-                            <td class="metric">{{ item.contact_score | default(0, true) }}%</td>
-                            <td class="metric">{{ item.completeness_score | default(0, true) }}%</td>
+                            <td class="metric-cell">{{ item.section_score | default(0, true) }}%</td>
+                            <td class="metric-cell">{{ item.contact_score | default(0, true) }}%</td>
+                            <td class="metric-cell">{{ item.completeness_score | default(0, true) }}%</td>
                             <td class="date-cell" data-date="{{ item.created_at | default('', true) }}">
-                                {{ item.created_at | default('Not available', true) }}
+                                {{ item.created_at | default('Recently', true) }}
                             </td>
                         </tr>
                         {% endfor %}
                     </tbody>
                 </table>
             </div>
-        </section>
+        </div>
         {% else %}
-        <section class="empty-state" aria-label="No resume history">
-            <div class="empty-card">
-                <div class="empty-icon">0</div>
-                <h2>No history yet</h2>
-                <p>Once you analyze a resume or compare it with a job description, your results will appear here.</p>
+        <div class="history-empty-card" aria-label="No resume history available">
+            <div class="empty-icon-wrap" aria-hidden="true">
+                <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <circle cx="12" cy="12" r="10"></circle>
+                    <polyline points="12 6 12 12 16 14"></polyline>
+                </svg>
             </div>
-        </section>
+            <h2 class="empty-title">No analysis history yet</h2>
+            <p class="empty-desc">
+                When you run a resume analysis or job match scan, your scores and metrics will be archived here.
+            </p>
+            <a href="/#upload-section" class="btn btn-primary">Check Your First Resume</a>
+        </div>
         {% endif %}
-    </main>
-
-    <script>
-        document.querySelectorAll(".score-fill").forEach((bar) => {
-            const score = Math.max(0, Math.min(100, Number.parseFloat(bar.dataset.score) || 0));
-
-            if (score >= 75) {
-                bar.classList.add("good");
-            } else if (score >= 45) {
-                bar.classList.add("mid");
-            }
-
-            requestAnimationFrame(() => {
-                bar.style.width = `${score}%`;
-            });
-        });
-
-        document.querySelectorAll("[data-date]").forEach((cell) => {
-            const rawDate = cell.dataset.date;
-
-            if (!rawDate) {
-                return;
-            }
-
-            const date = new Date(rawDate);
-
-            if (!Number.isNaN(date.getTime())) {
-                cell.textContent = new Intl.DateTimeFormat(undefined, {
-                    year: "numeric",
-                    month: "short",
-                    day: "numeric",
-                    hour: "2-digit",
-                    minute: "2-digit"
-                }).format(date);
-            }
-        });
-    </script>
-</body>
-
-</html>
+    </div>
+</section>
+{% endblock %}

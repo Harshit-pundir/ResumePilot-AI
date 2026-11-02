@@ -1,57 +1,67 @@
-<!DOCTYPE html>
-<html lang="en">
+{% extends "base.html" %}
 
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Create account | ATS Resume Analyzer</title>
-    <link rel="stylesheet" href="{{ url_for('static', path='css/history.css') }}">
-    <link rel="stylesheet" href="{{ url_for('static', path='css/auth.css') }}">
-</head>
+{% block title %}Create an Account · ResumePilot AI{% endblock %}
 
-<body>
-    <nav class="site-nav" aria-label="Main navigation">
-        <a class="brand" href="/" aria-label="ATS Resume Analyzer home">
-            <span class="brand-mark" aria-hidden="true">A</span>
-            <span>ATS Analyzer</span>
-        </a>
-        <a class="home-btn" href="/">Home</a>
-    </nav>
+{% block extra_css %}
+<link rel="stylesheet" href="{{ url_for('static', path='css/auth.css') }}?v=2">
+{% endblock %}
 
-    <main class="auth-main">
-        <section class="auth-card" aria-labelledby="register-title">
-            <header class="auth-card__header">
-                <p class="eyebrow">Get started</p>
-                <h1 id="register-title">Create your account</h1>
-                <p>Sign up to keep your resume reviews and job matches in one place.</p>
-            </header>
+{% block content %}
+<div class="auth-wrapper">
+    <div class="auth-card">
+        <header class="auth-header">
+            <div class="auth-badge" aria-hidden="true">
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
+                    <circle cx="8.5" cy="7" r="4"></circle>
+                    <line x1="20" y1="8" x2="20" y2="14"></line>
+                    <line x1="23" y1="11" x2="17" y2="11"></line>
+                </svg>
+            </div>
+            <h1 class="auth-title">Create your account</h1>
+            <p class="auth-subtitle">Save your resume analyses and compare scores across iterations.</p>
+        </header>
 
-            {% if error %}
-            <div class="auth-error" role="alert">{{ error }}</div>
-            {% endif %}
+        {% if error %}
+        <div class="auth-error" role="alert">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <circle cx="12" cy="12" r="10"></circle>
+                <line x1="12" y1="8" x2="12" y2="12"></line>
+                <line x1="12" y1="16" x2="12.01" y2="16"></line>
+            </svg>
+            <span>{{ error }}</span>
+        </div>
+        {% endif %}
 
-            <form class="auth-form" action="/auth/register" method="post">
-                <div class="auth-field">
-                    <label for="email">Email</label>
-                    <input id="email" name="email" type="email" value="{{ email | default('', true) }}"
-                        autocomplete="email" required>
-                </div>
-                <div class="auth-field">
-                    <label for="password">Password</label>
-                    <input id="password" name="password" type="password" autocomplete="new-password"
-                        minlength="8" required>
-                </div>
-                <div class="auth-field">
-                    <label for="confirm_password">Confirm password</label>
-                    <input id="confirm_password" name="confirm_password" type="password"
-                        autocomplete="new-password" required>
-                </div>
-                <button class="auth-submit" type="submit">Create account</button>
-            </form>
+        <form class="auth-form" action="/auth/register" method="post" id="register-form">
+            <div class="form-group">
+                <label class="form-label" for="email">Email address</label>
+                <input class="form-input" id="email" name="email" type="email"
+                       value="{{ email | default('', true) }}"
+                       autocomplete="email" required placeholder="you@example.com">
+            </div>
 
-            <p class="auth-switch">Already have an account? <a href="/login">Log in</a></p>
-        </section>
-    </main>
-</body>
+            <div class="form-group">
+                <label class="form-label" for="password">Password</label>
+                <input class="form-input" id="password" name="password" type="password"
+                       autocomplete="new-password" minlength="8" required placeholder="At least 8 characters">
+                <span class="form-hint">Must be at least 8 characters</span>
+            </div>
 
-</html>
+            <div class="form-group">
+                <label class="form-label" for="confirm_password">Confirm Password</label>
+                <input class="form-input" id="confirm_password" name="confirm_password" type="password"
+                       autocomplete="new-password" minlength="8" required placeholder="Repeat your password">
+            </div>
+
+            <button class="btn btn-primary auth-submit-btn" type="submit" id="register-submit-btn">
+                Create Account
+            </button>
+        </form>
+
+        <footer class="auth-footer">
+            <p>Already have an account? <a href="/login" class="auth-link-bold">Log in</a></p>
+        </footer>
+    </div>
+</div>
+{% endblock %}
