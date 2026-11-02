@@ -3,11 +3,14 @@
    ========================================================================== */
 
 .auth-wrapper {
+    width: 100%;
+    max-width: var(--layout-max);
+    margin: 0 auto;
     min-height: calc(100vh - 72px - 220px);
     display: flex;
     align-items: center;
     justify-content: center;
-    padding: var(--space-8) var(--space-4);
+    padding: var(--space-8) var(--layout-gutter);
     background: radial-gradient(circle at 50% 30%, rgba(13, 148, 136, 0.06) 0%, rgba(248, 250, 252, 0) 70%);
 }
 

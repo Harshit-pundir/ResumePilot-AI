@@ -12,7 +12,7 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 
     <!-- Stylesheets with cache busting -->
-    <link rel="stylesheet" href="{{ url_for('static', path='css/style.css') }}?v=2">
+    <link rel="stylesheet" href="{{ url_for('static', path='css/style.css') }}?v=4">
     {% block extra_css %}{% endblock %}
 </head>
 <body>
@@ -89,7 +89,7 @@
         </div>
     </header>
 
-    <main class="page-body">
+    <main class="page-body{% if request.url.path == '/' %} page-body-home{% endif %}">
         {% block content %}{% endblock %}
     </main>
 
