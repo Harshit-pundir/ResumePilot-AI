@@ -1,7 +1,7 @@
-from fastapi import APIRouter , File , UploadFile , Form
-from fastapi.requests import Request
+from fastapi import APIRouter , File , UploadFile , Form, Request
 from fastapi.responses import JSONResponse 
 import extensions
+from deps import get_current_user
 from services.contact_service import extract_contact_details
 from services.feedback_service import generate_feedback, generate_resume_feedback, generate_score_feedback
 from services.pdf_parser import extract_text_from_pdf
@@ -15,8 +15,9 @@ from utils.logger import get_logger
 logger = get_logger(__name__)
 router = APIRouter()
 
-def save_resume_history(supabase, file, mode, score, section_score, contact_score, completeness_score):
+def save_resume_history(supabase, file, mode, score, section_score, contact_score, completeness_score, user_id):
     history_record = {
+        "user_id": user_id,
         "resume_name": file.filename,
         "mode": mode,
         "score": score,
@@ -31,12 +32,11 @@ def save_resume_history(supabase, file, mode, score, section_score, contact_scor
         logger.exception("Failed to save analysis to Supabase.")
 
 
-def build_latest_report(report_data):
-    extensions.latest_report.clear()
-    extensions.latest_report.update(report_data)
+def build_latest_report(user_id, report_data):
+    extensions.latest_reports[user_id] = report_data
 
 
-def process_job_match(job_description, known_skills, resume_skills, sections, contact_details, file, section_score, contact_score, completeness_score, supabase):
+def process_job_match(job_description, known_skills, resume_skills, sections, contact_details, file, section_score, contact_score, completeness_score, supabase, user_id):
     jd_skills = extract_skills(job_description, known_skills)
     if not jd_skills:
         error_response = {
@@ -51,9 +51,11 @@ def process_job_match(job_description, known_skills, resume_skills, sections, co
     sorted_matched_skills = sorted(matched_skills)
     sorted_missing_skills = sorted(missing_skills)
 
-    save_resume_history(supabase, file, "job_match", ats_score, section_score, contact_score, completeness_score)
+    save_resume_history(supabase, file, "job_match", ats_score, section_score, contact_score, completeness_score, user_id)
+
 
     latest_report = {
+        "user_id": user_id,
         "mode": "job_match",
         "resume_name": file.filename,
         "score": ats_score,
@@ -64,7 +66,7 @@ def process_job_match(job_description, known_skills, resume_skills, sections, co
         "completeness_score": completeness_score,
         "feedback": feedback,
     }
-    build_latest_report(latest_report)
+    build_latest_report(user_id, latest_report)
 
     response_payload = {
         "mode": "job_match",
@@ -81,7 +83,7 @@ def process_job_match(job_description, known_skills, resume_skills, sections, co
     return JSONResponse(response_payload, 200)
 
 
-def process_resume_analysis(resume_skills, sections, contact_details, file, section_score, contact_score, completeness_score, supabase):
+def process_resume_analysis(resume_skills, sections, contact_details, file, section_score, contact_score, completeness_score, supabase, user_id):
     resume_score = calculate_resume_score(section_score, contact_score, completeness_score)
     assessment = generate_score_feedback(resume_score, "resume_analysis")
     recommendations = generate_resume_feedback(sections, contact_details)
@@ -105,7 +107,7 @@ def process_resume_analysis(resume_skills, sections, contact_details, file, sect
     }
     sorted_resume_skills = sorted(resume_skills)
 
-    save_resume_history(supabase, file, "resume_analysis", resume_score, section_score, contact_score, completeness_score)
+    save_resume_history(supabase, file, "resume_analysis", resume_score, section_score, contact_score, completeness_score, user_id)
 
     latest_report = {
         "resume_name": file.filename,
@@ -120,7 +122,7 @@ def process_resume_analysis(resume_skills, sections, contact_details, file, sect
         "missing_skills": [],
         "recommendations": recommendations,
     }
-    build_latest_report(latest_report)
+    build_latest_report(user_id, latest_report)
 
     response_payload = {
         "mode": "resume_analysis",
@@ -138,7 +140,10 @@ def process_resume_analysis(resume_skills, sections, contact_details, file, sect
 
 
 @router.post("/upload")
-def upload_resume(resume : UploadFile = File(None) , job_description: str = Form("")):
+def upload_resume(request: Request, resume : UploadFile = File(None) , job_description: str = Form("")):
+    user = get_current_user(request)
+    if not user:
+        return JSONResponse({"error": "Please log in."}, status_code=401)
     job_description = job_description.strip().lower()
     if not resume:
         error_response = {"error": "Please upload a resume."}
@@ -165,7 +170,7 @@ def upload_resume(resume : UploadFile = File(None) , job_description: str = Form
     supabase = extensions.supabase
 
     if job_description:
-        return process_job_match(job_description, known_skills, resume_skills, sections, contact_details, resume, section_score, contact_score, completeness_score, supabase)
+        return process_job_match(job_description, known_skills, resume_skills, sections, contact_details, resume, section_score, contact_score, completeness_score, supabase, user["id"])
 
 
-    return process_resume_analysis(resume_skills, sections, contact_details, resume, section_score, contact_score, completeness_score, supabase)
+    return process_resume_analysis(resume_skills, sections, contact_details, resume, section_score, contact_score, completeness_score, supabase, user["id"])

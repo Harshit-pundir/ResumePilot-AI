@@ -5,6 +5,7 @@ from fastapi.templating import Jinja2Templates
 from config import COOKIE_SECURE
 from extensions import supabase
 from routes.security import create_token, hash_password, verify_password
+from deps import get_current_user
 from utils.constants import EXPIRE_MINUTES
 
 from postgrest.exceptions import APIError
@@ -28,11 +29,15 @@ def login_and_redirect(user_id):
 
 @router.get("/login", response_class=HTMLResponse)
 def login_page(request: Request):
+    if get_current_user(request):
+        return RedirectResponse("/", status_code=303)
     return templates.TemplateResponse(request, "login.html")
 
 
 @router.get("/register", response_class=HTMLResponse)
 def register_page(request: Request):
+    if get_current_user(request):
+        return RedirectResponse("/", status_code=303)
     return templates.TemplateResponse(request, "register.html")
 
 
