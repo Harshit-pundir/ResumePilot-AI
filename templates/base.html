@@ -35,6 +35,7 @@
                 <a href="/" class="nav-link {% if request.url.path == '/' %}is-active{% endif %}">Home</a>
                 <a href="/#upload-section" class="nav-link">Check Score</a>
                 <a href="/history" class="nav-link {% if request.url.path == '/history' %}is-active{% endif %}">History</a>
+                {% if user and user.role == 'admin' %}<a href="/admin/history" class="nav-link">Admin</a>{% endif %}
             </nav>
 
             <div class="header-actions">
