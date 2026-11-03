@@ -1,8 +1,9 @@
 import markdown
 
-from fastapi import APIRouter , File , UploadFile
+from fastapi import APIRouter , File , UploadFile , Request
 from fastapi.responses import JSONResponse
 
+from deps import get_current_user
 from services.ai_service import generate_ai_resume_feedback
 from services.pdf_parser import extract_text_from_pdf
 from utils.logger import get_logger
@@ -41,7 +42,11 @@ def _friendly_ai_error(error):
 
 
 @router.post("/ai-improve")
-def ai_improve(resume : UploadFile = File(None)):
+def ai_improve(request: Request, resume: UploadFile = File(None)):
+    user = get_current_user(request)
+    if not user:
+        return JSONResponse({"error": "Please log in."}, status_code=401)
+
     if not resume:
         error_response = {"error": "Resume not uploaded"}
         return JSONResponse(error_response, 400)

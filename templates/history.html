@@ -29,6 +29,7 @@
                             <th scope="col">Contact</th>
                             <th scope="col">Completeness</th>
                             <th scope="col">Date Analyzed</th>
+                            {% if show_owner %}<th scope="col">User</th>{% endif %}
                         </tr>
                     </thead>
                     <tbody>
@@ -59,6 +60,7 @@
                             <td class="date-cell" data-date="{{ item.created_at | default('', true) }}">
                                 {{ item.created_at | default('Recently', true) }}
                             </td>
+                            {% if show_owner %}<td>{{ item.owner_email }}</td>{% endif %}
                         </tr>
                         {% endfor %}
                     </tbody>
