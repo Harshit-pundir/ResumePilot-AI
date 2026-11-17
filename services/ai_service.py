@@ -5,12 +5,17 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
+MODEL_NAME = "openai/gpt-oss-120b"
+TEMPERATURE = 0.4
+MAX_RESPONSE_TOKENS = 4000
+REQUEST_TIMEOUT_SECONDS = 45.0
+
 client = Groq(api_key=os.getenv("GROQ_API_KEY"))
 
 
-def generate_ai_resume_feedback(resume_text):
-
-    prompt = f"""
+def _build_resume_feedback_prompt(resume_text: str) -> str:
+    """Build the fixed instruction prompt around the uploaded resume text."""
+    return f"""
 You are a precise ATS resume editor. Analyze only the resume supplied below.
 
 Non-negotiable rules:
@@ -51,17 +56,21 @@ Resume:
 {resume_text}
 """
 
+
+def generate_ai_resume_feedback(resume_text: str) -> str | None:
+    """Send resume text to Groq and return its Markdown feedback, if present."""
+    prompt = _build_resume_feedback_prompt(resume_text)
     response = client.chat.completions.create(
-        model="openai/gpt-oss-120b", 
+        model=MODEL_NAME,
         messages=[
             {
                 "role": "user",
                 "content": prompt
             }
         ],
-        temperature=0.4,
-        max_tokens=4000,
-        timeout=45.0,
+        temperature=TEMPERATURE,
+        max_tokens=MAX_RESPONSE_TOKENS,
+        timeout=REQUEST_TIMEOUT_SECONDS,
     )
 
     return response.choices[0].message.content
