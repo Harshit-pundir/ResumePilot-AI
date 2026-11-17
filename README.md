@@ -157,7 +157,6 @@ ATS checker/
 │   ├── __init__.py
 │   ├── auth.py
 │   ├── ai.py
-│   ├── deps.py
 │   ├── history.py
 │   ├── home.py
 │   ├── report.py
@@ -180,7 +179,6 @@ ATS checker/
 ├── tests/
 ├── utils/
 │   ├── constants.py
-│   ├── helpers.py
 │   └── logger.py
 ├── skills.json
 ├── requirements.txt
