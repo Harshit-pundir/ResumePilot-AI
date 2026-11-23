@@ -1,39 +1,94 @@
-[
-    "java",
-    "python",
-    "c",
-    "c++",
-    "javascript",
-    "typescript",
-    "html",
-    "css",
-
-    "flask",
-    "django",
-    "fastapi",
-
-    "spring",
-    "spring boot",
-    "hibernate",
-
-    "mysql",
-    "postgresql",
-    "mongodb",
-
-    "docker",
-    "kubernetes",
-
-    "git",
-    "github",
-
-    "aws",
-    "azure",
-
-    "machine learning",
-    "deep learning",
-    "tensorflow",
-    "pytorch",
-    "pandas",
-    "numpy",
-    "scikit-learn"
-]
+{
+  "aliases": {
+    "c++": ["cpp", "c plus plus"],
+    "c": ["c language"],
+    "python": ["py", "python 3", "python3"],
+    "javascript": ["js", "ecmascript"],
+    "typescript": ["ts"],
+    "postgresql": ["postgres", "postgre sql"],
+    "kubernetes": ["k8s"],
+    "machine learning": ["ml"],
+    "artificial intelligence": ["ai"],
+    "scikit-learn": ["scikit learn", "sklearn"],
+    "node.js": ["nodejs", "node js"],
+    ".net": ["dotnet", "dot net"],
+    "ci/cd": ["continuous integration and continuous delivery", "continuous integration/continuous deployment"],
+    "rest api": ["rest apis", "restful api", "restful apis"],
+    "ros 2": ["ros2", "ros 2.0", "robot operating system", "robot operating system 2"],
+    "nav2": ["nav 2"],
+    "raspberry pi": ["raspberrypi", "raspberry pi platform", "rpi"],
+    "opencv": ["open cv"],
+    "cnn": ["cnns", "convolutional neural network", "convolutional neural networks"],
+    "natural language processing": ["nlp"],
+    "large language models": ["llm", "llms", "large language model"],
+    "generative ai": ["genai", "generative artificial intelligence"],
+    "retrieval-augmented generation": ["rag", "retrieval augmented generation"],
+    "data structures and algorithms": ["dsa", "data structures & algorithms"],
+    "problem solving": ["problem-solving ability", "problem-solving", "problem solving ability"],
+    "algorithms": ["implement efficient algorithms", "efficient algorithms"],
+    "git": ["use git"]
+  },
+  "jd_canonicalizations": {
+    "ai-powered robotics": "artificial intelligence",
+    "ai powered robotics": "artificial intelligence"
+  },
+  "technical_terms": [
+    "robotics software development", "drone flight control", "automation", "uav", "autonomous navigation",
+    "path planning", "computer vision", "deep learning", "machine learning",
+    "artificial intelligence", "feedback control", "motion planning", "object detection",
+    "sensor integration", "embedded systems", "flight control", "data visualization",
+    "statistical analysis", "feature engineering", "data analysis", "natural language processing",
+    "backend development", "frontend development", "api development", "database design",
+    "cloud computing", "continuous integration", "network security", "cybersecurity",
+    "system administration", "project management", "quality assurance", "test automation",
+    "algorithms", "system design", "testing", "debugging", "cloud deployment", "data structures and algorithms",
+    "java", "spring boot", "rest api", "sql", "postgresql", "mysql", "docker", "git", "github",
+    "fastapi", "flask", "sqlalchemy", "pytest", "pytorch", "model evaluation", "feature engineering",
+    "aws", "terraform", "prometheus", "tableau", "excel", "kafka", "arduino", "raspberry pi",
+    "esp32", "opencv", "python", "c++", "spring", "machine learning", "nlp", "natural language processing",
+    "large language models", "retrieval-augmented generation", "langchain", "rest apis", "cloud deployment"
+  ],
+  "semantic_evidence": {
+    "generative ai": {
+      "confidence": 0.9,
+      "evidence_groups": [["large language models"], ["llm"], ["llms"]]
+    },
+    "database management": {
+      "confidence": 0.88,
+      "evidence_groups": [["sql"], ["mysql"], ["postgresql"], ["supabase"], ["database management systems"]]
+    },
+    "backend development": {
+      "confidence": 0.88,
+      "evidence_groups": [["fastapi"], ["flask"], ["spring boot"], ["backend services"], ["rest api"]]
+    },
+    "artificial intelligence": {
+      "confidence": 0.9,
+      "evidence_groups": [["deep learning"], ["cnn"], ["svm"], ["computer vision"]]
+    },
+    "robotics software development": {
+      "confidence": 0.86,
+      "evidence_groups": [["robotics engineer"], ["robotic applications"]]
+    },
+    "autonomous navigation": {
+      "confidence": 0.9,
+      "evidence_groups": [
+        ["autonomous", "nav2"],
+        ["autonomous", "path planning"],
+        ["autonomous", "slam"]
+      ]
+    },
+    "drone flight control": {
+      "confidence": 0.9,
+      "evidence_groups": [["drone", "flight control"]]
+    },
+    "problem solving": {
+      "confidence": 0.9,
+      "evidence_groups": [
+        {"terms": ["data structures", "algorithms"], "confidence": 0.9},
+        {"terms": ["competitive programming"], "confidence": 0.9},
+        {"terms": ["algorithmic problem solving"], "confidence": 0.9},
+        {"terms": ["participated in", "coding challenges"], "confidence": 0.65}
+      ]
+    }
+  }
+}

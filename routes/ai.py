@@ -5,7 +5,7 @@ from fastapi.responses import JSONResponse
 
 from deps import get_current_user
 from services.ai_service import generate_ai_resume_feedback
-from services.pdf_parser import extract_text_from_pdf
+from services.pdf_parser import PDFTextExtractionError, extract_text_from_pdf
 from utils.logger import get_logger
 
 router = APIRouter()
@@ -51,11 +51,17 @@ def ai_improve(request: Request, resume: UploadFile = File(None)):
         error_response = {"error": "Resume not uploaded"}
         return JSONResponse(error_response, 400)
 
+    if not (resume.filename or "").lower().endswith(".pdf"):
+        return JSONResponse({"error": "Unsupported file type. Please upload a PDF resume."}, 415)
+
     try:
         resume_text = extract_text_from_pdf(resume.file)
+    except PDFTextExtractionError as exc:
+        logger.warning("Resume text extraction failed for AI suggestions: %s", exc)
+        return JSONResponse({"error": str(exc)}, 422)
     except Exception:
-        error_response = {"error": "Unable to read resume"}
-        return JSONResponse(error_response, 400)
+        logger.exception("Unable to read the uploaded PDF for AI suggestions.")
+        return JSONResponse({"error": "Unable to read the uploaded PDF."}, 422)
     
     try:
         result = generate_ai_resume_feedback(resume_text)

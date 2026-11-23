@@ -1,5 +1,7 @@
 from io import BytesIO
+import os
 import re
+import shutil
 from typing import Any
 
 from PyPDF2 import PdfReader
@@ -20,8 +22,54 @@ class PDFTextExtractionError(Exception):
     """Raised when neither the PDF text layer nor OCR yields usable text."""
 
 
+WINDOWS_TESSERACT_PATHS = (
+    r"C:\Program Files\Tesseract-OCR\tesseract.exe",
+    r"C:\Program Files (x86)\Tesseract-OCR\tesseract.exe",
+)
+
+
+def _resolve_tesseract_command() -> str:
+    """Find the Tesseract engine using configuration, PATH, or common locations."""
+    configured = os.environ.get("TESSERACT_CMD", "").strip().strip('"')
+    if configured:
+        configured = os.path.expandvars(os.path.expanduser(configured))
+        resolved = configured if os.path.isfile(configured) else shutil.which(configured)
+        if resolved:
+            return resolved
+        raise PDFTextExtractionError(
+            f"TESSERACT_CMD points to '{configured}', but that executable was not found. "
+            "Set TESSERACT_CMD to the Tesseract executable path."
+        )
+
+    executable = shutil.which("tesseract")
+    if executable:
+        return executable
+
+    if os.name == "nt":
+        for candidate in WINDOWS_TESSERACT_PATHS:
+            if os.path.isfile(candidate):
+                return candidate
+    else:
+        for candidate in ("/usr/bin/tesseract", "/usr/local/bin/tesseract"):
+            if os.path.isfile(candidate) and os.access(candidate, os.X_OK):
+                return candidate
+
+    raise PDFTextExtractionError(
+        "This PDF needs OCR, but the Tesseract OCR engine was not found. Install "
+        "Tesseract or set TESSERACT_CMD to its executable path, then try again."
+    )
+
+
+def _configure_tesseract(pytesseract: Any) -> None:
+    command = _resolve_tesseract_command()
+    controller = getattr(pytesseract, "pytesseract", pytesseract)
+    controller.tesseract_cmd = command
+
+
 def _extract_selectable_text(file: Any) -> str:
     """Read each selectable PDF page and return its nonempty text."""
+    if hasattr(file, "seek"):
+        file.seek(0)
     reader = PdfReader(file)
     page_texts = []
     for page in reader.pages:
@@ -81,11 +129,19 @@ def _extract_ocr_text(file: Any) -> str:
             "Install the Python requirements and the Tesseract OCR application."
         ) from exc
 
+    if hasattr(file, "seek"):
+        file.seek(0)
     try:
-        if hasattr(file, "seek"):
-            file.seek(0)
         pdf_bytes = file.read()
         document = fitz.open(stream=pdf_bytes, filetype="pdf")
+    except Exception as exc:
+        logger.exception("Unable to open PDF for OCR.")
+        raise PDFTextExtractionError(
+            "The uploaded file is not a readable PDF. Upload a valid, uncorrupted PDF and try again."
+        ) from exc
+
+    try:
+        _configure_tesseract(pytesseract)
         scale = OCR_RENDER_DPI / 72
         matrix = fitz.Matrix(scale, scale)
         page_texts = []
@@ -93,22 +149,24 @@ def _extract_ocr_text(file: Any) -> str:
             page_text = _extract_ocr_page(page, matrix, Image, pytesseract)
             page_texts.append(page_text)
             logger.info("OCR processed PDF page %s.", page_number)
-        document.close()
         readable_pages = [page_text for page_text in page_texts if page_text]
         return "\n".join(readable_pages)
-    except pytesseract.TesseractNotFoundError as exc:
-        raise PDFTextExtractionError(
-            "Tesseract OCR is not installed or is not on PATH. Install Tesseract "
-            "and configure its executable path before analyzing scanned PDFs."
-        ) from exc
     except PDFTextExtractionError:
         raise
     except Exception as exc:
+        tesseract_not_found = getattr(pytesseract, "TesseractNotFoundError", ())
+        if tesseract_not_found and isinstance(exc, tesseract_not_found):
+            raise PDFTextExtractionError(
+                "Tesseract could not start. Install the Tesseract OCR engine or set "
+                "TESSERACT_CMD to its executable path, then try again."
+            ) from exc
         logger.exception("OCR failed while extracting text from the PDF.")
         raise PDFTextExtractionError(
-            "Unable to extract text from this PDF. Check that it is a valid PDF "
-            "and that Tesseract OCR is installed correctly."
+            "OCR could not read this PDF. Check that its pages are clear and that "
+            "Tesseract includes English language data, then try again."
         ) from exc
+    finally:
+        document.close()
 
 
 def _has_usable_text(text: str) -> bool:

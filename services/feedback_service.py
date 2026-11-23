@@ -8,14 +8,12 @@ SECTION_RECOMMENDATIONS = (
     ("skills", "Add a Technical Skills section."),
     ("projects", "Include at least one technical project."),
     ("education", "Add your education details."),
-    ("experience", "Include work experience or internships."),
 )
 CONTACT_RECOMMENDATIONS = (
     ("email", "Add your email address."),
     ("phone", "Add your phone number."),
     ("linkedin", "Include your LinkedIn profile."),
     ("github", "Add your GitHub profile."),
-    ("portfolio", "Add your portfolio website."),
 )
 
 

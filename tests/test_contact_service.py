@@ -32,6 +32,16 @@ class ContactExtractionTests(unittest.TestCase):
         self.assertEqual(contacts["phone"], "9876543210")
         self.assertEqual(contacts["portfolio"], "https://example-first.test")
 
+    def test_detects_international_phone_formats_and_contact_links(self):
+        contacts = extract_contact_details(
+            "Contact: +1 (415) 555-2671 | https://www.linkedin.com/in/person "
+            "https://github.com/person"
+        )
+        self.assertEqual(contacts["phone"], "+1 (415) 555-2671")
+        self.assertIn("linkedin.com/in/person", contacts["linkedin"])
+        self.assertIn("github.com/person", contacts["github"])
+        self.assertIsNone(contacts["portfolio"])
+
     def test_missing_contacts_are_none(self):
         self.assertEqual(
             extract_contact_details("No contact details here."),

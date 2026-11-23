@@ -4,16 +4,18 @@ import unicodedata
 
 
 SECTION_HEADINGS = {
-    "summary": ("summary", "professional summary", "profile", "career objective", "objective"),
-    "skills": ("technical skills", "skills", "core skills", "professional skills", "key skills"),
-    "projects": ("projects", "project", "academic projects", "selected projects", "personal projects"),
-    "education": ("education", "academic", "academic background", "qualifications", "qualification"),
+    "summary": ("summary", "professional summary", "professional profile", "career summary", "profile", "career objective", "objective"),
+    "skills": ("technical skills", "technical expertise", "core competencies", "areas of expertise", "skills", "core skills", "professional skills", "key skills"),
+    "projects": ("projects", "project", "academic projects", "selected projects", "personal projects", "key projects"),
+    "education": ("education", "educational background", "academic", "academic background", "qualifications", "qualification"),
     "experience": (
         "experience", "work experience", "professional experience", "employment history",
-        "work history", "internship experience",
+        "work history", "internship", "internships", "internship experience", "leadership",
+        "leadership experience", "student leadership", "community leadership",
+        "extracurricular leadership", "positions of responsibility",
     ),
     "certifications": ("certifications", "certificates", "licenses", "licenses and certifications"),
-    "achievements": ("achievements", "awards", "honors", "honours", "accomplishments"),
+    "achievements": ("achievements", "awards", "honors", "honours", "honors and awards", "accomplishments"),
 }
 
 

@@ -49,12 +49,10 @@ class FeedbackCharacterizationTests(unittest.TestCase):
                 "Add a Technical Skills section.",
                 "Include at least one technical project.",
                 "Add your education details.",
-                "Include work experience or internships.",
                 "Add your email address.",
                 "Add your phone number.",
                 "Include your LinkedIn profile.",
                 "Add your GitHub profile.",
-                "Add your portfolio website.",
             ],
         )
 

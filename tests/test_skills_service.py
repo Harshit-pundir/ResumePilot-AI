@@ -227,6 +227,178 @@ class DomainIndependentSkillTests(unittest.TestCase):
         })
         self.assertEqual(extract_skills("Built APIs in RESTful API services", self.aliases), {"rest api"})
 
+    def test_sde_intern_jd_filters_metadata_fragments_and_uses_resume_wide_evidence(self):
+        jd = """SDE Internship
+Duration: 3–6 months
+Job type: Internship
+Responsibilities: Integrate intelligent functionalities into applications using LLM-based applications and NLP & Generative AI.
+Required skills: Java, Python, SQL, DSA, OOP, Backend Development, REST APIs, Flask, FastAPI, Git, GitHub, Database Management, Machine Learning, NLP, Generative AI/LLM, RAG, Docker, PostgreSQL, Spring Boot.
+Debug and test reliability."""
+        resume = """SUMMARY
+Software developer with problem solving skills through data structures and algorithms.
+TECHNICAL SKILLS
+Java, Python, SQL, OOP, FastAPI, Flask, REST APIs, SQLAlchemy, MySQL, Supabase, Git, GitHub
+PROJECTS
+Built and deployed multiple backend applications with REST APIs using FastAPI and Flask.
+Created an NLP pipeline using spaCy and integrated Groq LLM recommendations.
+Applied machine learning, deep learning and computer vision.
+ACHIEVEMENTS
+Solved 1400+ algorithm problems on coding platforms."""
+        jd_result = extract_jd_requirements(jd, self.aliases)
+        expected = {
+            "java", "python", "sql", "data structures and algorithms", "oop",
+            "backend development", "rest api", "flask", "fastapi", "git", "github",
+            "database management", "machine learning", "natural language processing",
+            "generative ai", "large language models", "retrieval-augmented generation",
+            "docker", "postgresql", "spring boot",
+        }
+        self.assertEqual(jd_result.normalized_skills, expected)
+        self.assertFalse({"debug", "test", "reliability", "duration", "job type", "internship"} & jd_result.normalized_skills)
+
+        classification = classify_skills(resume, jd_result.normalized_skills, self.aliases)
+        matched = classification.exact | set(classification.semantic) | set(classification.evidence_based)
+        expected_matched = {
+            "java", "python", "sql", "data structures and algorithms", "oop",
+            "backend development", "rest api", "flask", "fastapi", "git", "github",
+            "database management", "machine learning", "natural language processing",
+            "generative ai", "large language models",
+        }
+        self.assertTrue(expected_matched <= matched, expected_matched - matched)
+        self.assertTrue({"retrieval-augmented generation", "docker", "postgresql", "spring boot"} <= classification.missing)
+        self.assertFalse(matched & classification.missing)
+
+    def test_ai_ml_capabilities_match_project_implementation_without_inferencing_rag(self):
+        resume = """PROJECTS
+Developed an AI-powered resume analyzer with an NLP pipeline and integrated LLM recommendations.
+Built a face recognition system using facial embeddings and an AI recognition pipeline.
+Implemented neural style transfer with a deep learning framework and model-based feature extraction."""
+        requirements = {"ml integration", "ml-based features", "retrieval-augmented generation"}
+        result = classify_skills(resume, requirements, self.aliases)
+
+        for skill in ("ml integration", "ml-based features"):
+            with self.subTest(skill=skill):
+                self.assertIn(skill, result.evidence_based)
+                self.assertEqual(result.match_details[skill]["category"], "evidence")
+                self.assertTrue(result.match_details[skill]["evidence"])
+                self.assertEqual(result.match_details[skill]["source_section"], "projects")
+        self.assertIn("retrieval-augmented generation", result.missing)
+        self.assertFalse((result.exact | set(result.semantic) | set(result.evidence_based)) & result.missing)
+
+    def test_cybersecurity_evidence_does_not_match_ai_ml_capabilities(self):
+        resume = """EXPERIENCE
+Monitored network traffic, investigated security alerts, and hardened Linux systems.
+Configured SIEM correlation rules and documented incident response procedures."""
+        result = classify_skills(resume, {"ml integration", "ml-based features"}, self.aliases)
+        self.assertEqual(result.evidence_based, {})
+        self.assertEqual(result.missing, {"ml integration", "ml-based features"})
+
+    def test_jd_filters_prose_and_normalizes_alias_duplicates(self):
+        requirements = extract_jd_requirements("""\
+Software Engineer Intern — India
+- Ability to learn new technologies
+- Collaborate with frontend developers
+- NLP and Natural Language Processing
+- LLMs, Large Language Models, RAG, Retrieval-Augmented Generation
+- Problem-Solving Ability
+- Implement Efficient Algorithms
+- Use Git
+- Write clean, reusable code
+""", self.aliases)
+        self.assertEqual(requirements.normalized_skills, {
+            "natural language processing", "large language models",
+            "retrieval-augmented generation", "problem solving", "algorithms", "git",
+        })
+        self.assertEqual(len(requirements.normalized_skills), 6)
+        for noise in ("ability to learn", "collaborate with", "write clean", "software engineer intern", "india"):
+            self.assertFalse(any(noise in skill for skill in requirements.normalized_skills))
+
+    def test_cross_domain_jds_retain_unknown_skills_and_filter_duty_fragments(self):
+        jds = {
+            "web": "Required skills: TypeScript, Vue.js, VitePress and Foo-Bar. Build clean interfaces and collaborate across teams.",
+            "data": "Experience with DuckDB, Polars and dbt. Maintain reliable workflows for analysts.",
+            "ai": "Technical skills: JAX, Hydra, model evaluation. Work in a collaborative environment.",
+            "security": "Required tools: Zeek, Sigma and Suricata. Follow security procedures.",
+            "devops": "Tech stack: OpenTofu, Argo CD and Buildkite. Deploy scalable services.",
+        }
+        extracted = {domain: extract_jd_skills(text, self.aliases) for domain, text in jds.items()}
+        for domain, skills in extracted.items():
+            with self.subTest(domain=domain):
+                self.assertTrue(skills, domain)
+                self.assertFalse(any("collaborative" in skill or "workflows for" in skill or "clean interfaces" in skill for skill in skills))
+        self.assertIn("vitepress", extracted["web"])
+        self.assertIn("duckdb", extracted["data"])
+        self.assertIn("jax", extracted["ai"])
+        self.assertIn("zeek", extracted["security"])
+        self.assertIn("opentofu", extracted["devops"])
+        self.assertEqual(extract_jd_skills("Required skills: Postgre-SQL and Retrieval Augmented Generation", self.aliases), {
+            "postgresql", "retrieval-augmented generation",
+        })
+
+    def test_generic_contextual_evidence_matches_project_skills_without_dictionary_entries(self):
+        required = extract_jd_skills("Required skills: Data Pipelines, Model Evaluation, Foo-Bar", self.aliases)
+        resume = """TECHNICAL SKILLS
+Foo-Bar
+PROJECTS
+Built data pipeline jobs for an analytics warehouse.\nEvaluated model quality using held-out datasets.
+"""
+        result = classify_skills(resume, required, self.aliases)
+        self.assertEqual(result.exact, {"foo-bar"})
+        self.assertTrue({"data pipelines", "model evaluation"} <= set(result.evidence_based))
+        self.assertEqual(result.missing, set())
+
+        absent = classify_skills("PROJECTS\nBuilt a portfolio website with Vue.js.", required, self.aliases)
+        self.assertIn("data pipelines", absent.missing)
+        self.assertIn("model evaluation", absent.missing)
+
+    def test_aliases_deduplicate_classification_and_empty_scores_are_safe(self):
+        result = classify_skills("Built with NLP and Git.", {"NLP", "Natural Language Processing", "Use Git", "Git"}, self.aliases)
+        self.assertEqual(result.exact, {"natural language processing", "git"})
+        self.assertEqual(calculate_skill_score(set(), set()), 0.0)
+        self.assertEqual(calculate_skill_score({"git"}, {"git"}, {"git": float("nan")}), 100.0)
+        self.assertEqual(calculate_skill_score(set(), {"git"}, {"git": float("nan")}), 0.0)
+
+    def test_problem_solving_uses_contextual_resume_evidence(self):
+        cases = (
+            ("ACHIEVEMENTS\nSolved 1400+ problems across LeetCode, GFG and Codeforces.", "evidence"),
+            ("SUMMARY\nStrong foundation in Data Structures and Algorithms.", "semantic"),
+            ("ACTIVITIES\nCompetitive programming experience.", "semantic"),
+            ("ACHIEVEMENTS\nParticipated in coding challenges.", "evidence"),
+        )
+        for resume, expected_category in cases:
+            with self.subTest(resume=resume):
+                result = classify_skills(resume, {"problem solving"}, self.aliases)
+                self.assertEqual(result.exact, set())
+                self.assertEqual(result.related, set())
+                self.assertEqual(result.missing, set())
+                self.assertEqual(result.match_details["problem solving"]["category"], expected_category)
+                self.assertTrue(result.evidence["problem solving"])
+
+    def test_problem_solving_platform_name_without_context_is_not_evidence(self):
+        result = classify_skills("LeetCode profile: https://leetcode.com/example", {"problem solving"}, self.aliases)
+        self.assertEqual(result.evidence_based, {})
+        self.assertEqual(result.missing, {"problem solving"})
+
+    def test_evidence_match_is_counted_once_and_exposed_in_job_match_report(self):
+        confidence = {"problem solving": 1.0}
+        self.assertEqual(calculate_skill_score({"problem solving"}, {"problem solving"}, evidence_matches=confidence), 100.0)
+        self.assertEqual(calculate_skill_score(set(), {"problem solving"}, evidence_matches={"problem solving": 0.65}), 65.0)
+
+        from routes.upload import process_job_match
+        resume = "ACHIEVEMENTS\nSolved 1400+ problems across LeetCode, GFG and Codeforces."
+        aliases = self.aliases
+        sections = {key: "present" for key in ("summary", "skills", "projects", "education", "experience")}
+        contacts = {"email": "dev@example.com", "phone": None, "linkedin": None, "github": None, "portfolio": None}
+        with patch("routes.upload.save_resume_history"), patch("routes.upload.build_latest_report"):
+            response = process_job_match(
+                "Required skills: Problem Solving", aliases, set(), resume, sections, contacts,
+                SimpleNamespace(filename="resume.pdf"), 100, 50, 80, None, "evidence-user",
+            )
+        payload = json.loads(response.body)
+        self.assertEqual(payload["matched_skills"], ["problem solving"])
+        self.assertEqual(payload["missing_skills"], [])
+        self.assertIn("problem solving", payload["evidence_skills"])
+        self.assertEqual(payload["debug"]["evidence_matches"][0]["category"], "evidence")
+
     def test_exact_semantic_related_and_missing_are_distinct_and_evidence_backed(self):
         result = classify_skills(
             "Java services supporting backend platforms are deployed and maintained.",
@@ -234,7 +406,7 @@ class DomainIndependentSkillTests(unittest.TestCase):
             self.aliases,
         )
         self.assertIn("java", result.exact)
-        self.assertIn("java backend", set(result.semantic) | result.related)
+        self.assertIn("java backend", set(result.semantic) | set(result.evidence_based) | result.related)
         self.assertIn("spring boot", result.missing)
         self.assertIn("java backend", result.evidence)
         self.assertNotIn("spring boot", result.evidence)
@@ -278,7 +450,7 @@ class DomainIndependentSkillTests(unittest.TestCase):
         score_above = calculate_skill_score({"exact"}, requirements, {"semantic": SEMANTIC_CONFIDENCE_THRESHOLD})
         self.assertEqual(score_below, 25.0)
         self.assertEqual(score_above, 37.5)
-        self.assertEqual(calculate_skill_score({"exact"}, requirements, unresolved_requirements=1), 20.0)
+        self.assertEqual(calculate_skill_score({"exact"}, requirements, unresolved_requirements=1), 25.0)
 
     def test_negated_skill_mentions_are_not_exact_matches(self):
         for resume in (

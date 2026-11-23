@@ -41,6 +41,21 @@ GENERIC_TERMS = {
     "administrator", "scientist", "specialist", "manager", "intern", "candidate",
     "senior", "junior", "lead", "role", "position", "responsibilities", "responsibility",
     "drones", "drone", "robotics", "robotic", "robot", "robots", "ai-powered",
+    "software", "frameworks", "framework", "tools", "technology", "technologies",
+    "ability", "learn", "learning", "collaborate", "collaborative", "collaboration",
+    "environment", "design", "designers", "designer", "develop", "developers",
+    "maintain", "maintainable", "write", "clean", "reusable", "similar", "code",
+    "work", "workflows", "workflow", "location", "department", "entry", "level",
+    "reliability", "duration", "months", "month", "job", "type", "title",
+    "internship", "integrate", "intelligent", "functionalities", "applications",
+}
+UNKNOWN_SKILL_BLOCKLIST = GENERIC_TERMS | {
+    "build", "built", "create", "created", "collaborating", "designed", "developed",
+    "implement", "implemented", "deploy", "deployed", "configure", "configured",
+    "maintain", "maintained", "operate", "operated", "support", "supported", "use",
+    "used", "utilize", "utilized", "ensure", "ensured", "writing", "working",
+    "across", "team", "teams", "users", "user", "services", "scalable", "modern",
+    "responsible", "various", "multiple", "related",
 }
 
 LIST_CUE = re.compile(
@@ -85,6 +100,7 @@ class JDRequirements:
 class SkillClassification:
     exact: set[str] = field(default_factory=set)
     semantic: dict[str, float] = field(default_factory=dict)
+    evidence_based: dict[str, float] = field(default_factory=dict)
     related: set[str] = field(default_factory=set)
     missing: set[str] = field(default_factory=set)
     evidence: dict[str, str] = field(default_factory=dict)
@@ -127,6 +143,13 @@ def normalize_text(text: str) -> str:
     return re.sub(r"\s+", " ", text).strip()
 
 
+def _equivalence_key(text: str) -> str:
+    """Normalize common punctuation variants without collapsing C++ or C#."""
+    value = normalize_text(text)
+    value = re.sub(r"(?<=[a-z0-9])[./_-](?=[a-z0-9])", " ", value)
+    return re.sub(r"\s+", " ", value).strip()
+
+
 def _alias_index(lexicon: SkillLexicon | dict[str, list[str]] | list[str] | None) -> dict[str, str]:
     aliases = lexicon.aliases if isinstance(lexicon, SkillLexicon) else lexicon
     result = {normalize_text(name): normalize_text(name) for name in DEFAULT_ALIASES}
@@ -138,6 +161,8 @@ def _alias_index(lexicon: SkillLexicon | dict[str, list[str]] | list[str] | None
             result.update({normalize_text(alias): canonical for alias in values})
     elif isinstance(aliases, list):
         result.update({normalize_text(name): normalize_text(name) for name in aliases})
+    for spelling, canonical in list(result.items()):
+        result.setdefault(_equivalence_key(spelling), canonical)
     return result
 
 
@@ -147,19 +172,28 @@ def _boundary_pattern(term: str) -> re.Pattern:
     return re.compile(rf"(?<![\w]){escaped}{suffix}", re.IGNORECASE)
 
 
+def _flexible_boundary_patterns(term: str) -> list[re.Pattern]:
+    normalized = normalize_text(term)
+    pieces = re.split(r"(?<=[a-z0-9])[./_-](?=[a-z0-9])", normalized)
+    if len(pieces) == 1:
+        return [_boundary_pattern(normalized)]
+    escaped = r"[\s./_-]*".join(re.escape(piece) for piece in pieces)
+    return [re.compile(rf"(?<![\w]){escaped}(?![\w])", re.IGNORECASE)]
+
+
 def _canonical_phrase(phrase: str, lexicon: SkillLexicon, aliases: dict[str, str]) -> str:
     candidate = normalize_text(phrase).strip(" \t.,;:!?()[]{}'\"")
     jd_map = {normalize_text(key): normalize_text(value) for key, value in lexicon.jd_canonicalizations.items()}
-    return jd_map.get(candidate, aliases.get(candidate, candidate))
+    return jd_map.get(candidate, aliases.get(candidate, aliases.get(_equivalence_key(candidate), candidate)))
 
 
 def _split_conjunctions(value: str) -> list[str]:
-    """Split list syntax, preserving established slash compounds such as CI/CD."""
-    return [
-        piece.strip(" \t\r\n-*•:;,.()[]{}")
-        for piece in re.split(r"[,;\n|]+|\s+\band/or\b\s+|\s+\band\b\s+|\s+\bor\b\s+", value, flags=re.IGNORECASE)
-        if piece.strip(" \t\r\n-*•:;,.()[]{}")
-    ]
+    """Split list syntax while preserving CI/CD as one established compound."""
+    value = re.sub(r"(?i)ci/cd", "CI_CD_COMPOUND", value)
+    value = value.replace("&", " and ").replace("/", " and ")
+    pieces = re.split(r"[,;\n|]+|\s+\band\b\s+|\s+\bor\b\s+", value, flags=re.IGNORECASE)
+    return [piece.strip(" \t\r\n-*?:;,.()[]{}").replace("CI_CD_COMPOUND", "ci/cd")
+            for piece in pieces if piece.strip(" \t\r\n-*?:;,.()[]{}")]
 
 
 def _split_technical_list(value: str) -> list[str]:
@@ -181,7 +215,7 @@ def _split_technical_list(value: str) -> list[str]:
     return values
 
 
-def _requirement_phrases(original: str, aliases: dict[str, str], lexicon: SkillLexicon) -> list[str]:
+def _requirement_phrases(original: str, aliases: dict[str, str], lexicon: SkillLexicon, allow_unknown: bool = False) -> list[str]:
     cleaned = re.sub(r"^\s*(?:[-*•]+|\d+[.)])\s*", "", original).strip()
     # Parenthetical technologies are retained as separate constituents unless
     # they normalize to the same canonical requirement as the surrounding phrase.
@@ -195,11 +229,24 @@ def _requirement_phrases(original: str, aliases: dict[str, str], lexicon: SkillL
     seen = set()
     for raw in pieces:
         phrase = re.sub(r"\b(?:using|powered by)\b.*$", "", raw, flags=re.IGNORECASE).strip()
+        phrase = re.sub(r"^(?:and|or|plus)\s+", "", phrase, flags=re.IGNORECASE)
+        if allow_unknown:
+            phrase = re.sub(r"^(?:experience\s+(?:with|in)|familiarity\s+(?:with|in)|knowledge\s+(?:of|in)|proficiency\s+(?:with|in))\s+", "", phrase, flags=re.IGNORECASE)
         if not phrase or len(phrase) > 80 or len(phrase.split()) > 8:
             continue
         normalized = _canonical_phrase(phrase, lexicon, aliases)
         tokens = re.findall(r"[a-z0-9+#./-]+", normalized)
-        if not tokens or all(token in GENERIC_TERMS for token in tokens):
+        if not tokens:
+            continue
+        known_terms = {normalize_text(term) for term in lexicon.technical_terms}
+        recognized = normalized in aliases or normalized in known_terms
+        if normalized in {"debug", "test", "reliability"}:
+            continue
+        if all(token in GENERIC_TERMS for token in tokens) and not recognized:
+            continue
+        # Concise items in explicit skills/requirement lists can introduce a
+        # new framework or technology that is not yet present in the taxonomy.
+        if not recognized and not (allow_unknown and _plausible_unknown_skill(normalized)):
             continue
         if normalized in {"drones", "drone", "robotics", "robot", "robots"}:
             continue
@@ -210,32 +257,36 @@ def _requirement_phrases(original: str, aliases: dict[str, str], lexicon: SkillL
     return valid
 
 
-def _jd_source_groups(text: str) -> list[str]:
+def _plausible_unknown_skill(phrase: str) -> bool:
+    tokens = re.findall(r"[a-z0-9+#.]+", normalize_text(phrase))
+    return bool(tokens) and len(tokens) <= 6 and not any(token in UNKNOWN_SKILL_BLOCKLIST for token in tokens)
+
+
+def _jd_source_groups(text: str) -> list[tuple[str, bool]]:
     lines = [line.strip() for line in (text or "").replace("\r", "\n").split("\n") if line.strip()]
     bullets = [line for line in lines if re.match(r"^(?:[-*•]+|\d+[.)])\s*", line)]
     if bullets:
-        return bullets
+        return [(re.sub(r"^(?:[-*•]+|\d+[.)])\s*", "", line), True) for line in bullets]
 
     groups = []
     for line in lines:
         label = LIST_CUE.search(line)
         if label:
             tail = line[label.end():].strip()
-            # Retain the entire list line as its group; members are decomposed below.
             if tail:
-                groups.append(tail)
+                groups.extend((sentence, True) for sentence in re.split(r"(?<=[.!?])\s+", tail) if sentence)
             continue
         cue = SKILL_CUE.search(line)
         if cue:
             tail = line[cue.end():].strip()
             if tail:
-                groups.append(tail)
+                groups.extend((sentence, True) for sentence in re.split(r"(?<=[.!?])\s+", tail) if sentence)
     if groups:
         return groups
 
     # For inline JD text without explicit labels, sentence clauses with named
     # skill aliases remain independently extractable.
-    return [line for line in lines if line]
+    return [(sentence, False) for line in lines for sentence in re.split(r"(?<=[.!?])\s+", line) if sentence]
 
 
 def extract_jd_requirements(text: str, lexicon: SkillLexicon | None = None) -> JDRequirements:
@@ -249,12 +300,12 @@ def extract_jd_requirements(text: str, lexicon: SkillLexicon | None = None) -> J
     possible_count = 0
     seen_groups = set()
 
-    for source in _jd_source_groups(text):
+    for source, allow_unknown in _jd_source_groups(text):
         group_key = normalize_text(source)
         if group_key in seen_groups:
             continue
         seen_groups.add(group_key)
-        phrases = _requirement_phrases(source, aliases, lexicon)
+        phrases = _requirement_phrases(source, aliases, lexicon, allow_unknown)
         group_raw, group_normalized = [], []
         for raw, canonical in phrases:
             possible_count += 1
@@ -264,6 +315,8 @@ def extract_jd_requirements(text: str, lexicon: SkillLexicon | None = None) -> J
             if canonical not in group_normalized:
                 group_normalized.append(canonical)
             normalized_skills.add(canonical)
+        # Keep non-generic unparsed text for diagnostics only. It is not an ATS
+        # skill; the matching route and scorer do not treat it as a requirement.
         if not group_normalized and not _is_generic_jd_line(source):
             unresolved.append(source)
         groups.append(RequirementGroup(source, group_raw, group_normalized))
@@ -443,7 +496,11 @@ def _find_phrase_evidence(text: str, phrase: str, aliases: dict[str, str], canon
     terms.append(phrase)
     for sentence in _sentences(text):
         for term in terms:
-            match = _boundary_pattern(term).search(normalize_text(sentence))
+            match = None
+            for pattern in _flexible_boundary_patterns(term):
+                match = pattern.search(normalize_text(sentence))
+                if match:
+                    break
             if not match:
                 continue
             # A nearby denial describes missing experience, not evidence of a skill.
@@ -461,12 +518,118 @@ def _configured_semantic_evidence(text: str, skill: str, lexicon: SkillLexicon, 
     confidence = float(entry.get("confidence", 0.0)) if isinstance(entry, dict) else 0.0
     groups = entry.get("evidence_groups", []) if isinstance(entry, dict) else []
     for group in groups:
-        if not isinstance(group, list) or not group:
+        group_confidence = confidence
+        terms = group
+        if isinstance(group, dict):
+            terms = group.get("terms", [])
+            group_confidence = float(group.get("confidence", confidence))
+        if not isinstance(terms, list) or not terms:
             continue
         # All items in one evidence group must occur in one resume sentence.
         for sentence in _sentences(text):
-            if all(_boundary_pattern(term).search(normalize_text(sentence)) for term in group):
-                return confidence, sentence, _source_for_sentence(text, sentence)
+            if all(_boundary_pattern(term).search(normalize_text(sentence)) for term in terms):
+                return group_confidence, sentence, _source_for_sentence(text, sentence)
+    return 0.0, None, None
+
+
+_AI_ML_CAPABILITY_REQUIREMENT = re.compile(
+    r"\b(?:machine learning|\bml\b|artificial intelligence|\bai\b)\b.*"
+    r"\b(?:integration|integrat(?:e|ed|ing|ion)|features?|functionality|capabilit(?:y|ies)|powered|based)\b"
+    r"|\b(?:integration|integrat(?:e|ed|ing|ion)|features?|functionality|capabilit(?:y|ies)|powered|based)\b.*"
+    r"\b(?:machine learning|\bml\b|artificial intelligence|\bai\b)\b",
+    re.IGNORECASE,
+)
+_AI_ML_EVIDENCE_SIGNAL = re.compile(
+    r"\b(?:machine learning|deep learning|artificial intelligence|ai|ml|nlp|"
+    r"computer vision|neural|model|embedding|recognition|pytorch|tensorflow|keras|"
+    r"scikit[- ]learn|feature extraction|inference|classifier)\b",
+    re.IGNORECASE,
+)
+_AI_ML_IMPLEMENTATION_SIGNAL = re.compile(
+    r"\b(?:built|created|developed|implemented|designed|integrated|trained|deployed|"
+    r"pipeline|embedding|feature extraction|recognition|style transfer|inference|"
+    r"classification|classifier|model)\b",
+    re.IGNORECASE,
+)
+
+
+def _conceptual_ai_ml_evidence(text: str, skill: str):
+    """Match AI/ML capability requirements from implementation evidence in a resume section."""
+    if not _AI_ML_CAPABILITY_REQUIREMENT.search(normalize_text(skill)):
+        return 0.0, None, None
+
+    by_section: dict[str, list[str]] = {}
+    for sentence in _sentences(text):
+        section = _source_for_sentence(text, sentence) or "resume"
+        by_section.setdefault(section, []).append(sentence)
+
+    for section, sentences in by_section.items():
+        relevant = [
+            sentence for sentence in sentences
+            if _AI_ML_EVIDENCE_SIGNAL.search(sentence)
+            and _AI_ML_IMPLEMENTATION_SIGNAL.search(sentence)
+        ]
+        combined = " ".join(sentences)
+        if not relevant and _AI_ML_EVIDENCE_SIGNAL.search(combined) and _AI_ML_IMPLEMENTATION_SIGNAL.search(combined):
+            relevant = [sentence for sentence in sentences if _AI_ML_EVIDENCE_SIGNAL.search(sentence)]
+        if relevant:
+            evidence = " ".join(relevant[:3])
+            return 0.84, evidence, section
+    return 0.0, None, None
+
+
+def _word_root(token: str) -> str:
+    """Small dependency-free stemmer for common inflections and nominal forms."""
+    token = token.lower()
+    if token in {"analysis", "analyses", "analyzing", "analysed", "analyzed"}:
+        return "analyz"
+    if token.endswith("ization"):
+        return token[:-7] + "ize"
+    if token.endswith("ation"):
+        return token[:-5] + "at"
+    for suffix in ("isation", "ments", "ment", "ingly", "edly", "ing", "ied", "ies", "ed", "es", "s"):
+        if len(token) > len(suffix) + 2 and token.endswith(suffix):
+            token = token[:-len(suffix)]
+            if suffix in {"ing", "edly", "ed", "es", "s"} and len(token) > 2 and token[-1] == token[-2]:
+                token = token[:-1]
+            break
+    return token.rstrip("e") if token.endswith("e") and len(token) > 3 else token
+
+
+_ACTION_CONTEXT = re.compile(
+    r"\b(?:built|created|developed|implemented|designed|deployed|managed|analyzed|analysed|"
+    r"solved|completed|optimized|optimised|tested|maintained|architected|led|conducted|"
+    r"automated|trained|migrated|secured|configured|delivered|improved|reduced|increased|"
+    r"evaluated|validated|reviewed|researched|integrated|refactored|monitored)\b",
+    re.IGNORECASE,
+)
+_QUALIFICATION_CONTEXT = re.compile(
+    r"\b(?:foundation|fundamentals|proficient|expertise|experienced|speciali[sz]ed|"
+    r"demonstrated|strength|competenc(?:y|ies))\b", re.IGNORECASE,
+)
+
+
+def _generic_contextual_evidence(text: str, skill: str):
+    """Match inflected multiword skills when resume context supports real use."""
+    if skill == "problem solving":
+        for sentence in _sentences(text):
+            if (re.search(r"\bsolv(?:e|ed|ing)\b", normalize_text(sentence))
+                    and re.search(r"\bproblems?\b", normalize_text(sentence))
+                    and re.search(r"\b\d[\d,]*\+?\b", sentence)):
+                return 0.9, sentence, _source_for_sentence(text, sentence)
+    terms = {_word_root(token) for token in _word_set(skill)}
+    if len(terms) < 2:
+        return 0.0, None, None
+    for sentence in _sentences(text):
+        sentence_terms = {_word_root(token) for token in re.findall(r"[a-z0-9+#]+", normalize_text(sentence))}
+        if not terms.issubset(sentence_terms):
+            continue
+        action = bool(_ACTION_CONTEXT.search(sentence))
+        qualification = bool(_QUALIFICATION_CONTEXT.search(sentence))
+        quantified = bool(re.search(r"\b\d[\d,]*\+?\b", sentence))
+        if action or qualification:
+            confidence = 1.0 if action and quantified else 0.9 if action else 0.75
+            return confidence, sentence, _source_for_sentence(text, sentence)
     return 0.0, None, None
 
 
@@ -496,8 +659,9 @@ def classify_skills(
     resume_text = resume_skills if isinstance(resume_skills, str) else "\n".join(sorted(resume_skills))
     result = SkillClassification()
 
-    for requested in jd_skills:
-        skill = _canonical_phrase(requested, lexicon, alias_index)
+    canonical_requirements = {_canonical_phrase(item, lexicon, alias_index) for item in jd_skills}
+    for skill in canonical_requirements:
+        requested = skill
         sentence, source = _find_phrase_evidence(resume_text, skill, alias_index, skill)
         # The extracted skill set is keyword-based; exact matches must be backed
         # by a positive sentence occurrence so a negated mention cannot bypass
@@ -514,6 +678,18 @@ def classify_skills(
                 sentence, source = semantic_sentence, semantic_source
                 detail = {"canonical_skill": skill, "category": "semantic", "confidence": confidence, "evidence": sentence, "source_section": source}
             else:
+                evidence_confidence, evidence_sentence, evidence_source = (confidence, semantic_sentence, semantic_source)
+                if not evidence_sentence:
+                    evidence_confidence, evidence_sentence, evidence_source = _conceptual_ai_ml_evidence(resume_text, skill)
+                if not evidence_sentence:
+                    evidence_confidence, evidence_sentence, evidence_source = _generic_contextual_evidence(resume_text, skill)
+                if evidence_sentence and evidence_confidence > 0:
+                    result.evidence_based[requested] = evidence_confidence
+                    sentence, source = evidence_sentence, evidence_source
+                    detail = {"canonical_skill": skill, "category": "evidence", "confidence": evidence_confidence, "evidence": sentence, "source_section": source}
+                    result.evidence[requested] = sentence
+                    result.match_details[requested] = detail
+                    continue
                 ranked = [(_similarity(skill, sentence_text), sentence_text) for sentence_text in _sentences(resume_text)]
                 confidence, related_sentence = max(ranked, default=(0.0, ""))
                 overlap = _word_set(skill) & _word_set(related_sentence)

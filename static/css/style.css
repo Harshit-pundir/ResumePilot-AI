@@ -1091,6 +1091,24 @@ img, svg {
     margin-bottom: var(--space-6);
 }
 
+.skill-debug summary { cursor: pointer; }
+.skill-debug pre {
+    max-height: 24rem;
+    overflow: auto;
+    padding: var(--space-3);
+    border-radius: var(--radius-sm);
+    background: var(--bg-muted);
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+}
+.debug-evidence-item {
+    border-top: 1px solid var(--border-subtle);
+    padding: var(--space-2) 0;
+}
+.debug-evidence-item span,
+.debug-evidence-item small { margin-left: var(--space-2); color: var(--text-muted); }
+.debug-evidence-item blockquote { margin: var(--space-2) 0; white-space: pre-wrap; }
+
 .card-title {
     font-size: var(--text-base);
     font-weight: 700;

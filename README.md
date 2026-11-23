@@ -231,9 +231,13 @@ images with `pytesseract`. The Python packages are installed by
 machine running the app.
 
 **Windows:** Install Tesseract OCR (for example, using the UB Mannheim Windows
-installer), then ensure `tesseract.exe` is on `PATH`. If needed, set
-`pytesseract.pytesseract.tesseract_cmd` in `services/pdf_parser.py` to the
-installed executable path.
+installer). ResumePilot detects Tesseract on `PATH` and in common Windows
+install locations, including `C:\Program Files\Tesseract-OCR\tesseract.exe`.
+To use another installation, set `TESSERACT_CMD` in `.env`, for example:
+
+```env
+TESSERACT_CMD=C:\Program Files\Tesseract-OCR\tesseract.exe
+```
 
 **Ubuntu/Debian:**
 
@@ -250,6 +254,17 @@ brew install tesseract
 OCR runs only when selectable text is empty or below the parser's minimum
 threshold. If neither extraction method produces readable text, upload returns
 an error rather than scoring an empty resume.
+
+### Render deployment
+
+The Tesseract engine is an operating-system package and is not installed by
+`pip install pytesseract`. For Render, use the included `Dockerfile` so the
+runtime image installs both `tesseract-ocr` and English OCR data. In the Render
+service settings, change the service runtime to **Docker** and deploy the
+repository's Dockerfile. Keep your existing Supabase, Groq, and JWT environment
+variables in the Render dashboard. `TESSERACT_CMD` is optional in this image
+because Tesseract is installed on `PATH`; set it only if you use a custom
+binary path.
 
 ---
 
