@@ -267,6 +267,157 @@ Solved 1400+ algorithm problems on coding platforms."""
         self.assertTrue({"retrieval-augmented generation", "docker", "postgresql", "spring boot"} <= classification.missing)
         self.assertFalse(matched & classification.missing)
 
+    def test_sde_intern_noise_is_excluded_and_supported_skills_are_normalized(self):
+        jd = """Software Development Engineer Intern
+Work mode: Hybrid
+Responsibilities: Improve existing codebases and participate in technical discussions.
+Benefits: Mentorship and potential PPO consideration.
+Required skills: analytical thinking, ML model integration, PostgreSQL.
+Other: scalability, generic integration."""
+        requirements = extract_jd_requirements(jd, self.aliases)
+        self.assertEqual(requirements.normalized_skills, {
+            "problem solving", "ml model integration", "postgresql",
+        })
+        self.assertEqual(extract_jd_skills("Integrate third-party APIs and integrate AI/ML models", self.aliases), {
+            "api integration", "ml model integration",
+        })
+        # The API/report contract is an array of separate labels; no phrase is
+        # reconstructed by concatenating adjacent requirement text.
+        self.assertTrue(all(isinstance(skill, str) and "hybrid" not in skill for skill in requirements.normalized_skills))
+
+    def test_sde_intern_missing_skills_are_separate_and_resume_context_matches(self):
+        jd = "Required skills: Analytical Thinking, ML Model Integration, PostgreSQL"
+        requirements = extract_jd_requirements(jd, self.aliases)
+        resume = """TECHNICAL SKILLS
+Python, PostgreSQL
+PROJECTS
+Built an inference pipeline and integrated trained ML models into a web application."""
+        result = classify_skills(resume, requirements.normalized_skills, self.aliases)
+        self.assertIn("postgresql", result.exact)
+        self.assertIn("ml model integration", result.evidence_based)
+        self.assertIn("problem solving", result.missing)
+        self.assertEqual(result.missing, {"problem solving"})
+
+        from routes.upload import process_job_match
+        sections = {key: "present" for key in ("summary", "skills", "projects", "education", "experience")}
+        contacts = {"email": "dev@example.com", "phone": None, "linkedin": None, "github": None, "portfolio": None}
+        with patch("routes.upload.save_resume_history"), patch("routes.upload.build_latest_report"):
+            response = process_job_match(
+                jd, self.aliases, extract_skills(resume, self.aliases), resume, sections, contacts,
+                SimpleNamespace(filename="resume.pdf"), 100, 50, 80, None, "sde-regression",
+            )
+        payload = json.loads(response.body)
+        self.assertEqual(payload["missing_skills"], ["problem solving"])
+        self.assertEqual(payload["matched_skills"], ["postgresql"])
+        self.assertEqual(payload["partial_skills"], ["ml model integration"])
+        self.assertEqual(payload["total_jd_skills"], 3)
+        self.assertEqual(payload["matched_skill_count"] + payload["partial_skill_count"] + payload["missing_skill_count"], 3)
+        self.assertTrue(all(isinstance(skill, str) for skill in payload["missing_skills"]))
+        ledger = payload["skill_matches"]
+        self.assertEqual(len({item["canonical_skill"] for item in ledger}), payload["total_jd_skills"])
+        self.assertEqual({item["status"] for item in ledger}, {"matched", "partial", "missing"})
+        self.assertEqual(
+            round(sum(item["contribution"] for item in ledger) / payload["skill_summary"]["total_weight"] * 100, 2),
+            payload["skill_score"],
+        )
+
+    def test_skill_phrase_normalization_collapses_overlapping_jd_requirements(self):
+        requirements = extract_jd_requirements(
+            "Required skills: Object-Oriented Programming, SQL, SQL-based systems, "
+            "Data Structures and Algorithms, Algorithms, Data Structures, "
+            "solve problems involving data structures, AI/ML models, "
+            "backend-focused projects, database fundamentals, competitive programming",
+            self.aliases,
+        )
+        self.assertEqual(requirements.normalized_skills, {
+            "oop", "sql", "data structures and algorithms", "machine learning",
+            "backend development", "database management", "competitive programming",
+        })
+        self.assertEqual(len(requirements.normalized_skills), len(set(requirements.normalized_skills)))
+
+    def test_contextual_skill_evidence_respects_distinct_technologies_and_api_use(self):
+        resume = """TECHNICAL SKILLS
+Java, OOP, SQL, FastAPI, Flask
+PROJECTS
+Built backend services using FastAPI and Flask.
+Integrated the Groq API to provide model recommendations.
+Implemented an ML model to classify resume content."""
+        required = extract_jd_requirements(
+            "Required skills: Object-Oriented Programming, Backend-Focused Projects, "
+            "API Integration, AI/ML Models, PostgreSQL", self.aliases,
+        ).normalized_skills
+        result = classify_skills(resume, required, self.aliases)
+        self.assertIn("oop", result.exact)
+        self.assertIn("machine learning", result.exact)
+        self.assertIn("backend development", set(result.semantic) | set(result.evidence_based))
+        self.assertIn("api integration", result.evidence_based)
+        self.assertIn("postgresql", result.missing)
+
+        rest_only = classify_skills("Built and deployed REST APIs using FastAPI.", {"api integration"}, self.aliases)
+        self.assertEqual(rest_only.evidence_based, {})
+        self.assertEqual(rest_only.missing, {"api integration"})
+
+        sql_does_not_imply_postgresql = classify_skills("Used SQL with Supabase.", {"postgresql"}, self.aliases)
+        self.assertEqual(sql_does_not_imply_postgresql.missing, {"postgresql"})
+
+    def test_compound_data_structure_requirement_matches_project_evidence(self):
+        jd = extract_jd_requirements(
+            "Required skills: Data Structures, Algorithms, "
+            "solve problems involving data structures", self.aliases,
+        )
+        self.assertEqual(jd.normalized_skills, {"data structures and algorithms"})
+        result = classify_skills(
+            "PROJECTS\nSolved algorithm problems using data structures and algorithms.",
+            jd.normalized_skills,
+            self.aliases,
+        )
+        self.assertTrue(
+            {"data structures and algorithms"} & (result.exact | set(result.semantic) | set(result.evidence_based))
+        )
+
+    def test_generic_duties_are_not_extracted_and_evidence_is_clean_and_local(self):
+        duties = extract_jd_skills(
+            "Responsibilities: work with the team; build solutions to user problems; "
+            "good communication; work in a hybrid environment", self.aliases,
+        )
+        self.assertEqual(duties, set())
+
+        from services.skills_service import _clean_evidence
+        evidence = _clean_evidence(
+            "\x7f"
+            "Integrated ML-powered recommendations into the analyzer â€” with reliable results.\x01 "
+            "Unrelated project paragraph should not be appended."
+        )
+        self.assertIn("Integrated ML-powered recommendations", evidence)
+        self.assertNotIn("â", evidence)
+        self.assertNotIn("\ufffd", evidence)
+        self.assertNotIn("\x01", evidence)
+        self.assertNotIn("\x7f", evidence)
+        self.assertNotIn("Unrelated project", evidence)
+        self.assertLessEqual(len(evidence), 200)
+        self.assertNotIn(chr(0x00e2), evidence)
+        unicode_text = "\u0063af\u00e9 r\u00e9sum\u00e9"
+        self.assertEqual(_clean_evidence(unicode_text, None), unicode_text)
+        from services.skills_service import _sentences
+        malformed_bullet = chr(0x00e2) + chr(0x20ac) + chr(0x00a2) + " Built an ML model."
+        self.assertEqual(list(_sentences(malformed_bullet)), ["Built an ML model."])
+        long_evidence = _clean_evidence("Implemented an ML model with " + "technical details " * 30)
+        self.assertLessEqual(len(long_evidence), 200)
+        self.assertTrue(long_evidence.endswith(chr(0x2026)))
+
+    def test_exact_skill_wins_and_multiple_sentences_produce_one_evidence_record(self):
+        resume = """TECHNICAL SKILLS
+Problem Solving
+PROJECTS
+Solved 1400 problems using data structures and algorithms. Applied problem solving to optimize a search workflow."""
+        result = classify_skills(resume, {"problem solving"}, self.aliases)
+        self.assertEqual(result.exact, {"problem solving"})
+        self.assertEqual(result.semantic, {})
+        self.assertEqual(result.evidence_based, {})
+        self.assertEqual(len(result.match_details), 1)
+        self.assertEqual(result.match_details["problem solving"]["category"], "exact")
+        self.assertLessEqual(len(result.match_details["problem solving"]["evidence"]), 200)
+
     def test_ai_ml_capabilities_match_project_implementation_without_inferencing_rag(self):
         resume = """PROJECTS
 Developed an AI-powered resume analyzer with an NLP pipeline and integrated LLM recommendations.
@@ -394,10 +545,11 @@ Built data pipeline jobs for an analytics warehouse.\nEvaluated model quality us
                 SimpleNamespace(filename="resume.pdf"), 100, 50, 80, None, "evidence-user",
             )
         payload = json.loads(response.body)
-        self.assertEqual(payload["matched_skills"], ["problem solving"])
+        self.assertEqual(payload["matched_skills"], [])
+        self.assertEqual(payload["partial_skills"], ["problem solving"])
         self.assertEqual(payload["missing_skills"], [])
         self.assertIn("problem solving", payload["evidence_skills"])
-        self.assertEqual(payload["debug"]["evidence_matches"][0]["category"], "evidence")
+        self.assertEqual(payload["debug"]["evidence_matches"][0]["category"], "partial")
 
     def test_exact_semantic_related_and_missing_are_distinct_and_evidence_backed(self):
         result = classify_skills(

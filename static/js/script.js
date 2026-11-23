@@ -28,7 +28,27 @@
         return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + ' ' + sizes[i];
     };
 
-    /* ==========================================================================
+    const loadOptionalScript = (src) => new Promise((resolve, reject) => {
+        const existing = document.querySelector(`script[data-optional-src="${src}"]`);
+        if (existing?.dataset.loaded === 'true') return resolve();
+        if (existing) {
+            existing.addEventListener('load', resolve, { once: true });
+            existing.addEventListener('error', reject, { once: true });
+            return;
+        }
+        const script = document.createElement('script');
+        script.src = src;
+        script.async = true;
+        script.dataset.optionalSrc = src;
+        script.addEventListener('load', () => {
+            script.dataset.loaded = 'true';
+            resolve();
+        }, { once: true });
+        script.addEventListener('error', reject, { once: true });
+        document.head.appendChild(script);
+    });
+
+    /* ============================================================================
        Toast Notifications
        ========================================================================== */
     const toastEl = document.getElementById('toast');
@@ -293,12 +313,10 @@
         // Skills lists
         const matchedSkills = skillItems(Array.isArray(data.matched_skills) ? data.matched_skills : data.resume_skills);
         const missingSkills = skillItems(data.missing_skills);
-        const relatedSkills = skillItems(data.related_skills);
-        const evidenceSkills = data.evidence_skills && typeof data.evidence_skills === 'object'
-            ? Object.entries(data.evidence_skills)
-            : [];
-        const semanticSkills = data.semantic_skills && typeof data.semantic_skills === 'object'
-            ? Object.entries(data.semantic_skills)
+        const partialSkills = skillItems(data.partial_skills);
+        const skillSummary = data.skill_summary && typeof data.skill_summary === 'object' ? data.skill_summary : null;
+        const matchedEvidence = Array.isArray(data.skill_matches)
+            ? data.skill_matches.filter((item) => item.status === 'matched' && item.evidence)
             : [];
         const scoreBreakdown = data.score_breakdown && typeof data.score_breakdown === 'object'
             ? data.score_breakdown
@@ -350,11 +368,12 @@
                 <div class="metric-card">
                     <div class="metric-header">
                         <span class="metric-label">Skill Match</span>
-                        <span class="metric-value">${Number(data.skill_score).toFixed(1)}%</span>
+                        <span class="metric-value">${Number(data.skill_score).toFixed(2)}%</span>
                     </div>
                     <div class="progress-track">
                         <div class="progress-fill ${getScoreCategory(data.skill_score).class}" style="width: ${Math.round(data.skill_score)}%"></div>
                     </div>
+                    ${skillSummary ? `<small class="metric-detail">${Number(skillSummary.matched_count || 0)} matched · ${Number(skillSummary.partial_count || 0)} partial · ${Number(skillSummary.missing_count || 0)} missing of ${Number(skillSummary.total_skills || 0)}</small>` : ''}
                 </div>` : ''}
 
                 <div class="metric-card">
@@ -476,19 +495,33 @@
             <div class="skills-grid">
                 <div class="skills-column">
                     <h3 class="card-title">
-                        ${isJobMatch ? `Matched Skills (${matchedSkills.length})` : `Detected Skills (${matchedSkills.length})`}
+                        ${isJobMatch ? `Matched Skills (${skillSummary ? skillSummary.matched_count : matchedSkills.length})` : `Detected Skills (${matchedSkills.length})`}
                     </h3>
                     <div class="chips-container">
                         ${matchedSkills.length > 0
                             ? matchedSkills.map((s) => `<span class="skill-chip matched">${escapeHtml(s)}</span>`).join(' ')
                             : '<p class="empty-message">No technical skills detected yet.</p>'}
-                        ${evidenceSkills.map(([skill]) => `<p class="skill-evidence-note"><strong>${escapeHtml(skill)} — Evidenced</strong>: ${escapeHtml(data.skill_evidence?.[skill] || '')}</p>`).join('')}
+                        ${matchedEvidence.map((item) => `<p class="skill-evidence-note"><strong>${escapeHtml(item.canonical_skill)} · Evidenced</strong>: ${escapeHtml(item.evidence)}</p>`).join('')}
                     </div>
                 </div>
 
+                ${isJobMatch ? `<div class="skills-column">
+                    <h3 class="card-title">Partial Match (${skillSummary ? skillSummary.partial_count : partialSkills.length})</h3>
+                    <div class="chips-container">
+                        ${partialSkills.length > 0
+                            ? partialSkills.map((skill) => {
+                                const detail = (data.skill_matches || []).find((item) => item.canonical_skill === skill) || {};
+                                const evidence = detail.evidence || data.skill_evidence?.[skill] || '';
+                                const amount = Number(detail.credit || 0) * 100;
+                                return `<div class="skill-evidence-note"><strong>${escapeHtml(skill)}</strong><span class="skill-contribution">${amount.toFixed(0)}% credit · weight ${Number(detail.weight || 1).toFixed(1)}</span><br>${escapeHtml(evidence || detail.reason || 'Partial evidence')}</div>`;
+                            }).join('')
+                            : '<p class="empty-message">No partial matches.</p>'}
+                    </div>
+                </div>` : ''}
+
                 <div class="skills-column">
                     <h3 class="card-title">
-                        Missing Skills (${missingSkills.length})
+                        Missing Skills (${skillSummary ? skillSummary.missing_count : missingSkills.length})
                     </h3>
                     <div class="chips-container">
                         ${missingSkills.length > 0
@@ -498,30 +531,6 @@
                 </div>
             </div>
         `;
-
-        if (isJobMatch && relatedSkills.length > 0) {
-            html += `
-                <div class="skills-column related-skills">
-                    <h3 class="card-title">Related Experience (${relatedSkills.length})</h3>
-                    <div class="chips-container">
-                        ${relatedSkills.map((s) => `<span class="skill-chip">${escapeHtml(s)}</span>`).join(' ')}
-                    </div>
-                    <p class="empty-message">Related experience is shown separately and does not count as an exact skill match.</p>
-                </div>
-            `;
-        }
-
-        if (isJobMatch && semanticSkills.length > 0) {
-            html += `
-                <div class="skills-column semantic-skills">
-                    <h3 class="card-title">Semantic Matches (${semanticSkills.length})</h3>
-                    <div class="chips-container">
-                        ${semanticSkills.map(([skill, confidence]) => `<span class="skill-chip matched">${escapeHtml(skill)} (${Math.round(Number(confidence) * 100)}%)</span>`).join('')}
-                    </div>
-                    <p class="empty-message">Evidence-based phrase similarity above the configured confidence threshold. Exact matches score fully; semantic matches receive configured partial credit.</p>
-                </div>
-            `;
-        }
 
         if (isJobMatch && debugData) {
             const renderDebugList = (items) => Array.isArray(items) && items.length
@@ -791,8 +800,23 @@
         // Download PDF button (html2canvas + jsPDF)
         if (downloadPdfBtn) {
             downloadPdfBtn.addEventListener('click', async () => {
-                if (!aiRawMarkdown || !window.html2canvas || !window.jspdf) {
-                    showToast('PDF tools are still loading. Please try again.');
+                if (!aiRawMarkdown) {
+                    showToast('Generate AI suggestions before downloading them.');
+                    return;
+                }
+                try {
+                    if (!window.html2canvas) {
+                        await loadOptionalScript('https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js');
+                    }
+                    if (!window.jspdf) {
+                        await loadOptionalScript('https://cdn.jsdelivr.net/npm/jspdf@2.5.2/dist/jspdf.umd.min.js');
+                    }
+                } catch {
+                    showToast('Suggestion PDF export needs an internet connection. Your ATS report is still available.');
+                    return;
+                }
+                if (!window.html2canvas || !window.jspdf) {
+                    showToast('Suggestion PDF export tools are unavailable. Your ATS report is still available.');
                     return;
                 }
 
@@ -947,10 +971,17 @@
             aiRawMarkdown = data.response || '';
             const rawHtml = data.html || '';
 
-            // MUST sanitize HTML with DOMPurify
+            // DOMPurify is an optional online enhancement; offline fallback is escaped text.
+            if (typeof window.DOMPurify === 'undefined') {
+                try {
+                    await loadOptionalScript('https://cdn.jsdelivr.net/npm/dompurify@3.2.6/dist/purify.min.js');
+                } catch {
+                    // Continue with escaped plain text below.
+                }
+            }
             const cleanHtml = typeof window.DOMPurify !== 'undefined'
                 ? window.DOMPurify.sanitize(rawHtml)
-                : rawHtml;
+                : `<pre class="ai-markdown-fallback">${escapeHtml(data.response || '')}</pre>`;
 
             if (aiContent) {
                 aiContent.innerHTML = cleanHtml;

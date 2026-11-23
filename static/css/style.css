@@ -1218,6 +1218,27 @@ img, svg {
     color: var(--danger-text);
 }
 
+.metric-detail {
+    display: block;
+    margin-top: var(--space-2);
+    color: var(--text-muted);
+}
+
+.skill-contribution {
+    display: block;
+    color: var(--text-muted);
+    font-size: var(--text-xs);
+    margin-top: 0.2rem;
+}
+
+.skill-evidence-note {
+    flex-basis: 100%;
+    margin: 0;
+    color: var(--text-muted);
+    font-size: var(--text-xs);
+    line-height: 1.5;
+}
+
 .empty-message {
     font-size: var(--text-sm);
     color: var(--text-muted);

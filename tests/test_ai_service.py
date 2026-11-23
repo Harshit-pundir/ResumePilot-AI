@@ -12,9 +12,11 @@ class AIServiceCharacterizationTests(unittest.TestCase):
         response = SimpleNamespace(
             choices=[SimpleNamespace(message=SimpleNamespace(content=expected_text))]
         )
-        completion_api = ai_service.client.chat.completions
+        completion_api = SimpleNamespace(create=None)
+        fake_client = SimpleNamespace(chat=SimpleNamespace(completions=completion_api))
 
-        with patch.object(completion_api, "create", return_value=response) as create:
+        with patch.object(completion_api, "create", return_value=response) as create, \
+             patch.object(ai_service, "client", fake_client):
             result = ai_service.generate_ai_resume_feedback(resume_text)
 
         self.assertEqual(result, expected_text)
@@ -28,6 +30,10 @@ class AIServiceCharacterizationTests(unittest.TestCase):
         self.assertIn(resume_text, prompt)
         self.assertIn("Never hallucinate", prompt)
         self.assertIn("## ATS Tips", prompt)
+
+    def test_missing_groq_configuration_disables_only_optional_ai(self):
+        with patch.object(ai_service, "client", None):
+            self.assertIsNone(ai_service.generate_ai_resume_feedback("Local resume text"))
 
 
 if __name__ == "__main__":

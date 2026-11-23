@@ -46,37 +46,88 @@ def calculate_skill_score(
     semantic_matches: dict[str, float] | None = None,
     unresolved_requirements: int = 0,
     evidence_matches: dict[str, float] | None = None,
+    skill_weights: dict[str, float] | None = None,
 ) -> float:
-    """Score unique exact, semantic, and evidence-based JD matches."""
-    # Unparsed prose is diagnostic data, not a skill requirement.
-    denominator = len(jd_skills)
-    if not denominator:
-        return 0
+    """Score canonical JD requirements using the same per-skill weighted ledger as the API."""
+    return build_skill_score_breakdown(
+        jd_skills, matched_skills, semantic_matches, evidence_matches, skill_weights
+    )["score"]
+
+
+def build_skill_score_breakdown(
+    jd_skills: set[str],
+    matched_skills: set[str],
+    semantic_matches: dict[str, float] | None = None,
+    evidence_matches: dict[str, float] | None = None,
+    skill_weights: dict[str, float] | None = None,
+) -> dict[str, object]:
+    """Return the weighted score and an exclusive per-canonical-skill status ledger."""
     semantic_matches = semantic_matches or {}
     evidence_matches = evidence_matches or {}
-    exact_count = len(matched_skills & jd_skills)
-    earned_credit = float(exact_count)
-    for skill in jd_skills - matched_skills:
-        semantic_confidence = semantic_matches.get(skill, 0.0)
+    weights = skill_weights or {}
+    matches = matched_skills & jd_skills
+    normalized_weights = {}
+    for skill in jd_skills:
         try:
-            semantic_confidence = float(semantic_confidence)
+            weight = float(weights.get(skill, 1.0))
         except (TypeError, ValueError):
-            semantic_confidence = 0.0
-        semantic_credit = (
-            SEMANTIC_SCORE_CREDIT
-            if math.isfinite(semantic_confidence) and semantic_confidence >= SEMANTIC_CONFIDENCE_THRESHOLD
-            else 0.0
-        )
-        evidence_confidence = evidence_matches.get(skill, 0.0)
-        try:
-            evidence_confidence = float(evidence_confidence)
-        except (TypeError, ValueError):
-            evidence_confidence = 0.0
-        evidence_credit = max(0.0, min(1.0, evidence_confidence)) if math.isfinite(evidence_confidence) else 0.0
-        # A requirement earns at most one match credit even if duplicated across
-        # semantic/evidence channels; exact evidence takes precedence above.
-        earned_credit += max(semantic_credit, evidence_credit)
-    return _percentage_score(earned_credit, denominator)
+            weight = 1.0
+        normalized_weights[skill] = weight if math.isfinite(weight) and weight > 0 else 1.0
+    denominator = sum(normalized_weights.values())
+    ledger = []
+    numerator = 0.0
+    counts = {"matched": 0, "partial": 0, "missing": 0}
+    for skill in sorted(jd_skills):
+        weight = normalized_weights[skill]
+
+        if skill in matches:
+            status, credit, reason = "matched", 1.0, "Direct positive skill evidence"
+        else:
+            try:
+                semantic_value = float(semantic_matches.get(skill, 0.0))
+            except (TypeError, ValueError):
+                semantic_value = 0.0
+            try:
+                evidence_value = float(evidence_matches.get(skill, 0.0))
+            except (TypeError, ValueError):
+                evidence_value = 0.0
+            semantic_confidence = max(0.0, min(1.0, semantic_value)) if math.isfinite(semantic_value) else 0.0
+            evidence_confidence = max(0.0, min(1.0, evidence_value)) if math.isfinite(evidence_value) else 0.0
+            semantic_credit = SEMANTIC_SCORE_CREDIT if semantic_confidence >= SEMANTIC_CONFIDENCE_THRESHOLD else 0.0
+            credit = max(semantic_credit, evidence_confidence)
+            if credit > 0:
+                status = "matched" if credit >= 1.0 else "partial"
+                reason = (
+                    f"Contextual implementation evidence ({evidence_confidence:.0%} confidence)"
+                    if evidence_confidence >= semantic_credit and evidence_confidence > 0
+                    else f"Semantic evidence ({semantic_confidence:.0%} confidence); partial credit capped at {SEMANTIC_SCORE_CREDIT:.0%}"
+                )
+            else:
+                status, credit, reason = "missing", 0.0, "No sufficient resume evidence found"
+        counts[status] += 1
+        contribution = weight * credit
+        numerator += contribution
+        ledger.append({
+            "canonical_skill": skill,
+            "weight": weight,
+            "status": status,
+            "credit": round(credit, 4),
+            "confidence": round(max(semantic_confidence, evidence_confidence), 4) if skill not in matches else 1.0,
+            "contribution": round(contribution, 4),
+            "contribution_percent": round(contribution / denominator * 100, 2) if denominator else 0.0,
+            "reason": reason,
+        })
+    score = round(numerator / denominator * 100, ROUND_DECIMALS) if denominator else 0.0
+    return {
+        "score": score,
+        "total_skills": len(ledger),
+        "matched_count": counts["matched"],
+        "partial_count": counts["partial"],
+        "missing_count": counts["missing"],
+        "total_weight": round(denominator, 4),
+        "earned_weight": round(numerator, 4),
+        "skills": ledger,
+    }
 
 
 def calculate_section_score(sections: dict[str, str]) -> float:

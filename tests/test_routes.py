@@ -123,6 +123,35 @@ class RouteCharacterizationTests(unittest.TestCase):
             result = ai.ai_improve(request, resume=resume)
         self.assertEqual(result, {"response": "## Feedback", "html": "<h2>Feedback</h2>\n"})
 
+    def test_ai_timeout_and_missing_key_are_optional_failures(self):
+        request = make_request("/ai-improve")
+        resume = UploadFile(filename="resume.pdf", file=io.BytesIO(b"pdf"))
+        with patch.object(ai, "get_current_user", return_value={"id": "user-1"}), \
+             patch.object(ai, "extract_text_from_pdf", return_value="local resume text"), \
+             patch.object(ai, "generate_ai_resume_feedback", side_effect=TimeoutError("timed out")):
+            timed_out = ai.ai_improve(request, resume)
+        self.assertEqual(timed_out.status_code, 504)
+        self.assertIn("AI request took too long", json.loads(timed_out.body)["error"])
+
+        with patch.object(ai, "get_current_user", return_value={"id": "user-1"}), \
+             patch.object(ai, "extract_text_from_pdf", return_value="local resume text"), \
+             patch.object(ai, "generate_ai_resume_feedback", return_value=None), \
+             patch.object(ai, "GROQ_API_KEY", None):
+            unavailable = ai.ai_improve(request, resume)
+        self.assertEqual(unavailable.status_code, 503)
+        self.assertIn("local ATS analysis", json.loads(unavailable.body)["error"])
+
+    def test_current_user_uses_signed_claims_without_supabase(self):
+        from deps import get_current_user
+        from routes.security import create_token
+
+        request = make_request("/upload")
+        token = create_token("offline-user", email="offline@example.com", role="user")
+        request.scope["headers"] = [(b"cookie", f"access_token={token}".encode())]
+        with patch("deps.extensions.supabase", None):
+            user = get_current_user(request)
+        self.assertEqual(user, {"id": "offline-user", "email": "offline@example.com", "role": "user"})
+
     def test_auth_routes_keep_redirects_and_invalid_input_responses(self):
         logout = auth.logout_user()
         self.assertEqual(logout.status_code, 303)

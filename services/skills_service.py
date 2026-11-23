@@ -55,7 +55,13 @@ UNKNOWN_SKILL_BLOCKLIST = GENERIC_TERMS | {
     "maintain", "maintained", "operate", "operated", "support", "supported", "use",
     "used", "utilize", "utilized", "ensure", "ensured", "writing", "working",
     "across", "team", "teams", "users", "user", "services", "scalable", "modern",
-    "responsible", "various", "multiple", "related",
+    "responsible", "various", "multiple", "related", "hybrid", "remote", "onsite",
+    "mentorship", "mentor", "learning", "opportunities", "potential", "ppo",
+    "consideration", "considerations", "discussion", "discussions", "codebases",
+    "improve", "improving", "participate", "participating", "technical",
+    "scalability", "efficiency", "integration", "site", "batch", "stipend",
+    "salary", "compensation", "benefit", "benefits",
+    "communication", "communicate", "interpersonal", "teamwork",
 }
 
 LIST_CUE = re.compile(
@@ -190,9 +196,11 @@ def _canonical_phrase(phrase: str, lexicon: SkillLexicon, aliases: dict[str, str
 def _split_conjunctions(value: str) -> list[str]:
     """Split list syntax while preserving CI/CD as one established compound."""
     value = re.sub(r"(?i)ci/cd", "CI_CD_COMPOUND", value)
+    value = re.sub(r"(?i)ai/ml", "AI_ML_COMPOUND", value)
+    value = re.sub(r"(?i)data\s+structures\s*(?:and|&)\s*algorithms", "DSA_COMPOUND", value)
     value = value.replace("&", " and ").replace("/", " and ")
     pieces = re.split(r"[,;\n|]+|\s+\band\b\s+|\s+\bor\b\s+", value, flags=re.IGNORECASE)
-    return [piece.strip(" \t\r\n-*?:;,.()[]{}").replace("CI_CD_COMPOUND", "ci/cd")
+    return [piece.strip(" \t\r\n-*?:;,.()[]{}").replace("CI_CD_COMPOUND", "ci/cd").replace("AI_ML_COMPOUND", "ai/ml").replace("DSA_COMPOUND", "data structures and algorithms")
             for piece in pieces if piece.strip(" \t\r\n-*?:;,.()[]{}")]
 
 
@@ -235,6 +243,9 @@ def _requirement_phrases(original: str, aliases: dict[str, str], lexicon: SkillL
         if not phrase or len(phrase) > 80 or len(phrase.split()) > 8:
             continue
         normalized = _canonical_phrase(phrase, lexicon, aliases)
+        # Recognize meaningful combinations before filtering generic terms:
+        # integration is not a skill by itself, but ML model integration is.
+        normalized = _canonical_phrase(normalized, lexicon, aliases)
         tokens = re.findall(r"[a-z0-9+#./-]+", normalized)
         if not tokens:
             continue
@@ -321,6 +332,15 @@ def extract_jd_requirements(text: str, lexicon: SkillLexicon | None = None) -> J
             unresolved.append(source)
         groups.append(RequirementGroup(source, group_raw, group_normalized))
 
+    normalized_skills = _collapse_overlapping_requirements(normalized_skills)
+    for group in groups:
+        group_skills = _collapse_overlapping_requirements(set(group.normalized_skills))
+        if "data structures and algorithms" in normalized_skills:
+            group_skills = {
+                "data structures and algorithms" if skill in {"data structures", "algorithms"} else skill
+                for skill in group_skills
+            }
+        group.normalized_skills = sorted(group_skills)
     coverage = round((mapped_count / possible_count) * 100, 2) if possible_count else 0.0
     if unresolved and groups:
         coverage = round(coverage * (len(groups) - len(unresolved)) / len(groups), 2)
@@ -330,6 +350,15 @@ def extract_jd_requirements(text: str, lexicon: SkillLexicon | None = None) -> J
 def _is_generic_jd_line(text: str) -> bool:
     tokens = re.findall(r"[a-z]+", normalize_text(text))
     return not tokens or all(token in GENERIC_TERMS for token in tokens)
+
+
+def _collapse_overlapping_requirements(skills: set[str]) -> set[str]:
+    """Collapse component mentions when the JD also expresses their compound skill."""
+    result = set(skills)
+    if "data structures and algorithms" in result or {"data structures", "algorithms"} <= result:
+        result.difference_update({"data structures", "algorithms"})
+        result.add("data structures and algorithms")
+    return result
 
 
 def extract_jd_skills(text: str, aliases: SkillLexicon | dict[str, list[str]] | list[str] | None = None) -> set[str]:
@@ -460,10 +489,41 @@ def extract_skills(text: str, known_skills: SkillLexicon | dict[str, list[str]] 
     }
 
 
+def _clean_evidence(value: str, max_chars: int | None = 200) -> str:
+    """Normalize common encoding artifacts and controls in resume evidence."""
+    value = unicodedata.normalize("NFKC", value or "")
+    for broken, corrected in {
+        "â€”": "—", "â€“": "–", "â€™": "’", "â€˜": "‘",
+        "â€œ": "“", "â€": "”", "ï¿½": "", "�": "",
+    }.items():
+        value = value.replace(broken, corrected)
+    # Repair a second UTF-8/Windows-1252 decoding pass when present.
+    value = value.replace("\u00e2\u20ac\u201d", "\u2014")
+    value = value.replace("\u00e2\u20ac\u201c", "\u2013")
+    value = value.replace("\u00e2\u20ac\u2122", "\u2019")
+    value = value.replace("\u00e2\u20ac\u00a6", "\u2026")
+    value = value.replace("\u00e2\u20ac\u00a2", chr(0x2022))
+    value = value.replace("\ufffd", "")
+    value = "".join(character for character in value if unicodedata.category(character) != "Cc" or character in "\t\r\n")
+    value = re.sub(r"\s+", " ", value).strip()
+    if max_chars:
+        value = re.split(r"(?<=[.!?])\s+", value, maxsplit=1)[0]
+    was_truncated = bool(max_chars and len(value) > max_chars)
+    if was_truncated:
+        cutoff = value.rfind(" ", 0, max_chars - 1)
+        if cutoff < max_chars // 2:
+            cutoff = max_chars - 1
+        value = value[:cutoff].rstrip(" ,;:-") + "…"
+    if was_truncated:
+        value = value[:max_chars - 1].rstrip(" ,;:-") + chr(0x2026)
+    return value
+
+
 def _sentences(text: str):
     for line in re.split(r"\n+", text or ""):
         for sentence in re.split(r"(?<=[.!?])\s+", line):
             sentence = sentence.strip(" -*•\t")
+            sentence = _clean_evidence(sentence).strip(" -*\t" + chr(0x2022))
             if sentence:
                 yield sentence
 
@@ -482,11 +542,11 @@ def _source_for_sentence(text: str, sentence: str) -> str:
         compact = _compact_heading(line.strip())
         if compact in aliases:
             current = aliases[compact]
-        if target and target in normalize_text(line):
+        if target and target in normalize_text(_clean_evidence(line, None)):
             return current
     sections = extract_resume_sections(text or "")
     for section, content in sections.items():
-        if target and target in normalize_text(content):
+        if target and target in normalize_text(_clean_evidence(content, None)):
             return "project" if section == "projects" else section
     return current if text else "resume"
 
@@ -569,12 +629,28 @@ def _conceptual_ai_ml_evidence(text: str, skill: str):
             if _AI_ML_EVIDENCE_SIGNAL.search(sentence)
             and _AI_ML_IMPLEMENTATION_SIGNAL.search(sentence)
         ]
-        combined = " ".join(sentences)
-        if not relevant and _AI_ML_EVIDENCE_SIGNAL.search(combined) and _AI_ML_IMPLEMENTATION_SIGNAL.search(combined):
-            relevant = [sentence for sentence in sentences if _AI_ML_EVIDENCE_SIGNAL.search(sentence)]
         if relevant:
-            evidence = " ".join(relevant[:3])
-            return 0.84, evidence, section
+            # Keep evidence local to one sentence. Combining every AI/ML
+            # mention in a section can join unrelated project descriptions.
+            return 0.84, relevant[0], section
+    return 0.0, None, None
+
+
+_API_ACTION = re.compile(r"\b(?:integrat\w*|consum\w*|call\w*|invok\w*|connect\w*|use|used|using)\b", re.IGNORECASE)
+_EXTERNAL_API = re.compile(
+    r"\b(?:third[- ]party|external)\s+(?:[\w.-]+\s+)?apis?\b"
+    r"|\b(?:api|apis)\s+(?:from|provided by)\s+[A-Z][\w.-]+\b"
+    r"|\b(?!REST\b|Web\b|FastAPI\b)([A-Z][\w.+-]{1,30})['’]?s?\s+APIs?\b"
+)
+
+
+def _api_integration_evidence(text: str, skill: str):
+    """Require evidence of consuming an external API, not merely building REST APIs."""
+    if skill != "api integration":
+        return 0.0, None, None
+    for sentence in _sentences(text):
+        if _API_ACTION.search(sentence) and _EXTERNAL_API.search(sentence):
+            return 0.86, sentence, _source_for_sentence(text, sentence)
     return 0.0, None, None
 
 
@@ -681,6 +757,8 @@ def classify_skills(
                 evidence_confidence, evidence_sentence, evidence_source = (confidence, semantic_sentence, semantic_source)
                 if not evidence_sentence:
                     evidence_confidence, evidence_sentence, evidence_source = _conceptual_ai_ml_evidence(resume_text, skill)
+                if not evidence_sentence:
+                    evidence_confidence, evidence_sentence, evidence_source = _api_integration_evidence(resume_text, skill)
                 if not evidence_sentence:
                     evidence_confidence, evidence_sentence, evidence_source = _generic_contextual_evidence(resume_text, skill)
                 if evidence_sentence and evidence_confidence > 0:

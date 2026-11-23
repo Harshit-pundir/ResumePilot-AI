@@ -94,6 +94,50 @@ Hackathon finalist and 1400+ DSA problems solved."""
         self.assertEqual(calculate_contact_score(contacts), 75.0)
         self.assertEqual(calculate_ats_score(skill_score, 100, 75, 90), 76.25)
 
+    def test_skill_score_uses_exclusive_weighted_ledger(self):
+        from services.scoring_service import build_skill_score_breakdown
+
+        self.assertEqual(calculate_skill_score({"python", "sql"}, {"python", "sql"}), 100.0)
+        self.assertEqual(calculate_skill_score(set(), {"python", "sql"}), 0.0)
+        requirements = {f"skill-{i}" for i in range(15)}
+        self.assertEqual(calculate_skill_score(set(sorted(requirements)[:13]), requirements), 86.67)
+
+        partial = build_skill_score_breakdown(
+            {"exact", "partial", "missing"}, {"exact"}, {"partial": 0.9}
+        )
+        self.assertEqual(partial["score"], round((1 + 0.5) / 3 * 100, 2))
+        self.assertEqual((partial["matched_count"], partial["partial_count"], partial["missing_count"]), (1, 1, 1))
+        self.assertEqual(sum(partial[key] for key in ("matched_count", "partial_count", "missing_count")), partial["total_skills"])
+
+        weighted = build_skill_score_breakdown(
+            {"important", "ordinary"}, {"ordinary"}, skill_weights={"important": 3, "ordinary": 1}
+        )
+        self.assertEqual(weighted["score"], 25.0)
+        by_name = {item["canonical_skill"]: item for item in weighted["skills"]}
+        self.assertEqual(by_name["important"]["weight"], 3.0)
+        self.assertEqual(by_name["ordinary"]["contribution"], 1.0)
+
+    def test_skill_ledger_prefers_exact_and_uses_one_partial_credit(self):
+        from services.scoring_service import build_skill_score_breakdown
+
+        ledger = build_skill_score_breakdown(
+            {"exact", "partial", "missing"},
+            {"exact"},
+            semantic_matches={"exact": 0.99, "partial": 0.9},
+            evidence_matches={"exact": 0.99, "partial": 0.8},
+        )
+        by_skill = {item["canonical_skill"]: item for item in ledger["skills"]}
+        self.assertEqual(by_skill["exact"]["status"], "matched")
+        self.assertEqual(by_skill["exact"]["credit"], 1.0)
+        self.assertEqual(by_skill["partial"]["status"], "partial")
+        self.assertEqual(by_skill["partial"]["credit"], 0.8)
+        self.assertEqual(by_skill["missing"]["status"], "missing")
+        self.assertEqual(ledger["score"], 60.0)
+        self.assertEqual(ledger["matched_count"] + ledger["partial_count"] + ledger["missing_count"], ledger["total_skills"])
+
+        reproduced = round(sum(item["contribution"] for item in ledger["skills"]) / ledger["total_weight"] * 100, 2)
+        self.assertEqual(reproduced, ledger["score"])
+
     def test_weak_resume_and_empty_extraction_scores_reflect_required_gaps(self):
         sections = {"summary": "Only a short summary", "skills": "", "projects": "", "education": ""}
         contacts = {"email": "weak@example.com", "phone": None, "linkedin": None, "github": None, "portfolio": None}

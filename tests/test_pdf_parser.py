@@ -142,6 +142,42 @@ class ScannedPDFTests(unittest.TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertEqual(__import__("json").loads(response.body)["mode"], "resume_analysis")
 
+    @unittest.skipUnless(HAS_TESSERACT, "Tesseract engine not installed")
+    def test_real_scanned_pdf_job_match_completes_with_network_disabled(self):
+        import json
+        import socket
+        from fastapi import Request
+        from routes import upload
+        from routes.security import create_token
+
+        pdf_bytes = make_scanned_pdf([
+            "Jordan Rivera Software Engineer",
+            "Python FastAPI SQL Git projects education",
+        ])
+        token = create_token("offline-ats-user", email="offline@example.com", role="user")
+        request = Request({
+            "type": "http", "asgi": {"version": "3.0"}, "http_version": "1.1",
+            "method": "POST", "scheme": "http", "path": "/upload",
+            "raw_path": b"/upload", "query_string": b"",
+            "headers": [(b"cookie", f"access_token={token}".encode())],
+            "client": ("127.0.0.1", 8000), "server": ("test", 80),
+        })
+        resume = SimpleNamespace(filename="offline-resume.pdf", file=io.BytesIO(pdf_bytes))
+        with patch.object(upload.extensions, "supabase", None), \
+             patch.object(socket.socket, "connect", side_effect=OSError("network disabled")):
+            response = upload.upload_resume(
+                request,
+                resume=resume,
+                job_description="Required skills: Python, FastAPI, PostgreSQL",
+            )
+
+        payload = json.loads(response.body)
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(payload["mode"], "job_match")
+        self.assertEqual(payload["total_jd_skills"], 3)
+        self.assertEqual(payload["matched_skill_count"] + payload["partial_skill_count"] + payload["missing_skill_count"], 3)
+        self.assertIn("postgresql", payload["missing_skills"])
+
     def test_missing_tesseract_has_actionable_error(self):
         scanned_pdf = make_scanned_pdf(["A valid image-only PDF page"])
         with patch.object(

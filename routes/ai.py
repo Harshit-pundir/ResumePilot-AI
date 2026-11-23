@@ -4,7 +4,7 @@ from fastapi import APIRouter , File , UploadFile , Request
 from fastapi.responses import JSONResponse
 
 from deps import get_current_user
-from services.ai_service import generate_ai_resume_feedback
+from services.ai_service import GROQ_API_KEY, generate_ai_resume_feedback
 from services.pdf_parser import PDFTextExtractionError, extract_text_from_pdf
 from utils.logger import get_logger
 
@@ -43,7 +43,7 @@ def _friendly_ai_error(error):
 
 @router.post("/ai-improve")
 def ai_improve(request: Request, resume: UploadFile = File(None)):
-    user = get_current_user(request)
+    user = get_current_user(request, offline=True)
     if not user:
         return JSONResponse({"error": "Please log in."}, status_code=401)
 
@@ -71,11 +71,20 @@ def ai_improve(request: Request, resume: UploadFile = File(None)):
         error_response = {"error": message}
         return JSONResponse(error_response, status)
 
+    if not result:
+        message = (
+            "AI suggestions are unavailable because Groq is not configured. "
+            "Your local ATS analysis and recommendations are still available."
+            if not GROQ_API_KEY else
+            "AI suggestions are temporarily unavailable. Your local ATS analysis and recommendations are still available."
+        )
+        return JSONResponse({"error": message}, 503)
+
     rendered_html = markdown.markdown(
         result,
         extensions=["extra", "sane_lists", "nl2br"],
         output_format="html5",
-    )
+    ) + "\n"
     response_payload = {
         "response": result,
         "html": rendered_html,

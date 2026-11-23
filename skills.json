@@ -24,13 +24,38 @@
     "generative ai": ["genai", "generative artificial intelligence"],
     "retrieval-augmented generation": ["rag", "retrieval augmented generation"],
     "data structures and algorithms": ["dsa", "data structures & algorithms"],
+    "oop": ["object-oriented programming", "object oriented programming", "object orientation"],
+    "competitive programming": ["competitive coding", "competitive programming"],
     "problem solving": ["problem-solving ability", "problem-solving", "problem solving ability"],
+    "api integration": ["api integrations", "integrate third-party apis", "integrating third-party apis", "third-party api integration"],
+    "ml model integration": ["ml models integration", "integrate ai/ml models", "integrate ml models", "integrating ml models", "ai/ml model integration"],
     "algorithms": ["implement efficient algorithms", "efficient algorithms"],
     "git": ["use git"]
   },
   "jd_canonicalizations": {
     "ai-powered robotics": "artificial intelligence",
-    "ai powered robotics": "artificial intelligence"
+    "ai powered robotics": "artificial intelligence",
+    "analytical thinking": "problem solving",
+    "analytical skills": "problem solving",
+    "relational database": "database management",
+    "relational databases": "database management",
+    "integrate third-party apis": "api integration",
+    "integrating third-party apis": "api integration",
+    "third-party api integration": "api integration",
+    "integrate ai/ml models": "ml model integration",
+    "integrate ml models": "ml model integration",
+    "integrating ml models": "ml model integration",
+    "ml models integration": "ml model integration",
+    "ai/ml model integration": "ml model integration",
+    "ai/ml models": "machine learning",
+    "ai ml models": "machine learning",
+    "sql-based systems": "sql",
+    "sql based systems": "sql",
+    "database fundamentals": "database management",
+    "backend-focused projects": "backend development",
+    "backend focused projects": "backend development",
+    "solve problems involving data structures": "data structures and algorithms",
+    "solving problems involving data structures": "data structures and algorithms"
   },
   "technical_terms": [
     "robotics software development", "drone flight control", "automation", "uav", "autonomous navigation",
@@ -46,7 +71,8 @@
     "fastapi", "flask", "sqlalchemy", "pytest", "pytorch", "model evaluation", "feature engineering",
     "aws", "terraform", "prometheus", "tableau", "excel", "kafka", "arduino", "raspberry pi",
     "esp32", "opencv", "python", "c++", "spring", "machine learning", "nlp", "natural language processing",
-    "large language models", "retrieval-augmented generation", "langchain", "rest apis", "cloud deployment"
+    "large language models", "retrieval-augmented generation", "langchain", "rest apis", "cloud deployment",
+    "api integration", "ml model integration", "oop", "competitive programming"
   ],
   "semantic_evidence": {
     "generative ai": {
@@ -88,6 +114,14 @@
         {"terms": ["competitive programming"], "confidence": 0.9},
         {"terms": ["algorithmic problem solving"], "confidence": 0.9},
         {"terms": ["participated in", "coding challenges"], "confidence": 0.65}
+      ]
+    },
+    "competitive programming": {
+      "confidence": 0.86,
+      "evidence_groups": [
+        ["competitive programming"],
+        ["data structures", "algorithms"],
+        ["solved", "problems", "leetcode"]
       ]
     }
   }
