@@ -6,11 +6,6 @@
     <title>{% block title %}ResumePilot AI · ATS Resume Analyzer{% endblock %}</title>
     <meta name="description" content="Analyze your resume with ATS scoring, detect missing skills, and get targeted recommendations.">
 
-    <!-- Preconnect & Google Font Inter -->
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-
     <!-- Stylesheets with cache busting -->
     <link rel="stylesheet" href="{{ url_for('static', path='css/style.css') }}?v=4">
     {% block extra_css %}{% endblock %}
@@ -148,11 +143,9 @@
     <!-- Global Toast Container -->
     <div class="toast hidden" id="toast" role="status" aria-live="polite"></div>
 
-    <!-- Pinned external scripts -->
-    <script src="https://cdn.jsdelivr.net/npm/dompurify@3.2.6/dist/purify.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.2/dist/jspdf.umd.min.js"></script>
-    <script src="{{ url_for('static', path='js/script.js') }}?v=2"></script>
+    <!-- Core UI assets are local. Optional PDF export loads its tools only on demand. -->
+    <script src="{{ url_for('static', path='js/skill-utils.js') }}?v=1"></script>
+    <script src="{{ url_for('static', path='js/script.js') }}?v=3"></script>
     {% block extra_js %}{% endblock %}
 </body>
 </html>

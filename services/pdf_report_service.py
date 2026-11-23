@@ -1,4 +1,5 @@
 from datetime import datetime
+from xml.sax.saxutils import escape
 
 from reportlab.graphics.shapes import Drawing, Rect, String
 from reportlab.lib import colors
@@ -137,6 +138,13 @@ def add_page_border(canvas, doc):
 def add_matched_skills(story, styles, report):
     skills = report["matched_skills"] or ["No matched skills found."]
     _add_suggestions_table(story, styles, "Matched Skills", "Matched Skills", skills, colors.HexColor("#16A34A"), colors.HexColor("#DCFCE7"), "âœ“")
+    evidence = [
+        f"{escape(item['canonical_skill'])} — Evidence: {escape(item['evidence'])}"
+        for item in report.get("skill_matches", [])
+        if item.get("category") == "evidence" and item.get("evidence")
+    ]
+    if evidence:
+        _add_suggestions_table(story, styles, "Evidence for Matched Skills", "Resume evidence", evidence, colors.HexColor("#2563EB"), colors.whitesmoke, "")
 
 
 def add_missing_skills(story, styles, report):

@@ -4,11 +4,11 @@ import extensions
 from deps import get_current_user
 from services.contact_service import extract_contact_details
 from services.feedback_service import generate_feedback, generate_resume_feedback, generate_score_feedback
-from services.pdf_parser import extract_text_from_pdf
-from services.scoring_service import calculate_ats_score, calculate_completeness_score, calculate_contact_score
+from services.pdf_parser import PDFTextExtractionError, extract_text_from_pdf
+from services.scoring_service import build_score_breakdown, build_skill_score_breakdown, calculate_ats_score, calculate_completeness_score, calculate_contact_score
 from services.scoring_service import calculate_resume_score, calculate_section_score, calculate_skill_score
 from services.section_extractor import extract_resume_sections
-from services.skills_service import extract_skills, load_skills, match_skills
+from services.skills_service import classify_skills, extract_jd_requirements, extract_skills, load_skills
 from utils.logger import get_logger
 
 
@@ -16,6 +16,9 @@ logger = get_logger(__name__)
 router = APIRouter()
 
 def save_resume_history(supabase, file, mode, score, section_score, contact_score, completeness_score, user_id):
+    if not supabase:
+        logger.info("Skipping resume history save because Supabase is unavailable.")
+        return False
     history_record = {
         "user_id": user_id,
         "resume_name": file.filename,
@@ -28,28 +31,52 @@ def save_resume_history(supabase, file, mode, score, section_score, contact_scor
 
     try:
         supabase.table("resume_history").insert(history_record).execute()
+        return True
     except Exception:
-        logger.exception("Failed to save analysis to Supabase.")
+        logger.warning("Analysis completed, but resume history could not be saved.", exc_info=True)
+        return False
 
 
 def build_latest_report(user_id, report_data):
     extensions.latest_reports[user_id] = report_data
 
 
-def process_job_match(job_description, known_skills, resume_skills, sections, contact_details, file, section_score, contact_score, completeness_score, supabase, user_id):
-    jd_skills = extract_skills(job_description, known_skills)
+def process_job_match(job_description, skill_aliases, resume_skills, resume_text, sections, contact_details, file, section_score, contact_score, completeness_score, supabase, user_id):
+    jd_extraction = extract_jd_requirements(job_description, skill_aliases)
+    jd_skills = jd_extraction.normalized_skills
     if not jd_skills:
         error_response = {
             "error": "No recognizable technical skills found in the job description."
         }
         return JSONResponse(error_response, 400)
 
-    matched_skills, missing_skills = match_skills(resume_skills, jd_skills)
-    skill_score = calculate_skill_score(matched_skills, jd_skills)
+    classification = classify_skills(resume_text, jd_skills, skill_aliases)
+    semantic_skills = classification.semantic
+    skill_match_breakdown = build_skill_score_breakdown(
+        jd_skills, classification.exact, semantic_skills, classification.evidence_based
+    )
+    skill_score = skill_match_breakdown["score"]
+    matched_skills = {item["canonical_skill"] for item in skill_match_breakdown["skills"] if item["status"] == "matched"}
+    partial_skills = {item["canonical_skill"] for item in skill_match_breakdown["skills"] if item["status"] == "partial"}
+    missing_skills = {item["canonical_skill"] for item in skill_match_breakdown["skills"] if item["status"] == "missing"}
+    related_skills = set()
     ats_score = calculate_ats_score(skill_score, section_score, contact_score, completeness_score)
+    score_breakdown = build_score_breakdown("job_match", sections, contact_details, skill_score)
     feedback = generate_feedback(ats_score, matched_skills, missing_skills, sections, contact_details)
     sorted_matched_skills = sorted(matched_skills)
     sorted_missing_skills = sorted(missing_skills)
+    sorted_related_skills = sorted(related_skills)
+    details_by_skill = classification.match_details
+    sorted_match_details = []
+    for item in skill_match_breakdown["skills"]:
+        skill = item["canonical_skill"]
+        detail = dict(item)
+        detail.update({key: value for key, value in details_by_skill.get(skill, {}).items() if key != "category"})
+        detail["match_method"] = details_by_skill.get(skill, {}).get("category", item["status"])
+        detail["category"] = item["status"]
+        if skill in classification.related:
+            detail["reason"] = "Related resume evidence exists, but it does not sufficiently establish this requirement"
+        sorted_match_details.append(detail)
 
     save_resume_history(supabase, file, "job_match", ats_score, section_score, contact_score, completeness_score, user_id)
 
@@ -61,9 +88,23 @@ def process_job_match(job_description, known_skills, resume_skills, sections, co
         "score": ats_score,
         "matched_skills": sorted_matched_skills,
         "missing_skills": sorted_missing_skills,
+        "partial_skills": sorted(partial_skills),
+        "skill_summary": {key: skill_match_breakdown[key] for key in (
+            "total_skills", "matched_count", "partial_count", "missing_count", "total_weight", "earned_weight"
+        )},
+        "total_jd_skills": skill_match_breakdown["total_skills"],
+        "matched_skill_count": skill_match_breakdown["matched_count"],
+        "partial_skill_count": skill_match_breakdown["partial_count"],
+        "missing_skill_count": skill_match_breakdown["missing_count"],
+        "related_skills": sorted_related_skills,
+        "semantic_skills": dict(sorted(semantic_skills.items())),
+        "evidence_skills": dict(sorted(classification.evidence_based.items())),
+        "skill_evidence": classification.evidence,
+        "skill_matches": sorted_match_details,
         "section_score": section_score,
         "contact_score": contact_score,
         "completeness_score": completeness_score,
+        "score_breakdown": score_breakdown,
         "feedback": feedback,
     }
     build_latest_report(user_id, latest_report)
@@ -75,8 +116,46 @@ def process_job_match(job_description, known_skills, resume_skills, sections, co
         "section_score": section_score,
         "contact_score": contact_score,
         "completeness_score": completeness_score,
+        "score_breakdown": score_breakdown,
         "matched_skills": sorted_matched_skills,
         "missing_skills": sorted_missing_skills,
+        "partial_skills": sorted(partial_skills),
+        "skill_summary": {key: skill_match_breakdown[key] for key in (
+            "total_skills", "matched_count", "partial_count", "missing_count", "total_weight", "earned_weight"
+        )},
+        "total_jd_skills": skill_match_breakdown["total_skills"],
+        "matched_skill_count": skill_match_breakdown["matched_count"],
+        "partial_skill_count": skill_match_breakdown["partial_count"],
+        "missing_skill_count": skill_match_breakdown["missing_count"],
+        "related_skills": sorted_related_skills,
+        "semantic_skills": dict(sorted(semantic_skills.items())),
+        "evidence_skills": dict(sorted(classification.evidence_based.items())),
+        "skill_evidence": classification.evidence,
+        "skill_matches": sorted_match_details,
+        "debug": {
+            "original_jd": job_description,
+            "original_jd_requirements": [group.original_text for group in jd_extraction.groups],
+            "requirement_groups": [
+                {
+                    "original_text": group.original_text,
+                    "raw_skills": group.raw_skills,
+                    "normalized_skills": group.normalized_skills,
+                }
+                for group in jd_extraction.groups
+            ],
+            "raw_extracted_jd_skills": jd_extraction.raw_skills,
+            "normalized_jd_skills": sorted(jd_skills),
+            "unparsed_requirements": jd_extraction.unresolved_requirements,
+            "raw_extracted_resume_text": resume_text,
+            "normalized_resume_skills": sorted(resume_skills),
+            "exact_matches": [detail for detail in sorted_match_details if detail["match_method"] == "exact"],
+            "semantic_matches": [detail for detail in sorted_match_details if detail["match_method"] == "semantic"],
+            "evidence_matches": [detail for detail in sorted_match_details if detail["match_method"] == "evidence"],
+            "related_skills": [],
+            "skill_summary": skill_match_breakdown,
+            "missing_skills": sorted(missing_skills),
+            "extraction_coverage_percent": jd_extraction.extraction_coverage,
+        },
         "contact_details": contact_details,
         "feedback": feedback,
     }
@@ -85,6 +164,7 @@ def process_job_match(job_description, known_skills, resume_skills, sections, co
 
 def process_resume_analysis(resume_skills, sections, contact_details, file, section_score, contact_score, completeness_score, supabase, user_id):
     resume_score = calculate_resume_score(section_score, contact_score, completeness_score)
+    score_breakdown = build_score_breakdown("resume_analysis", sections, contact_details)
     assessment = generate_score_feedback(resume_score, "resume_analysis")
     recommendations = generate_resume_feedback(sections, contact_details)
     section_status = {
@@ -92,14 +172,16 @@ def process_resume_analysis(resume_skills, sections, contact_details, file, sect
         "Skills": bool(sections["skills"].strip()),
         "Projects": bool(sections["projects"].strip()),
         "Education": bool(sections["education"].strip()),
-        "Experience": bool(sections["experience"].strip()),
+        "Experience / Leadership (optional)": bool(sections["experience"].strip()),
+        "Achievements (optional)": bool(sections["achievements"].strip()),
+        "Certifications (optional)": bool(sections["certifications"].strip()),
     }
     contact_status = {
         "Email": bool(contact_details["email"]),
         "Phone": bool(contact_details["phone"]),
         "LinkedIn": bool(contact_details["linkedin"]),
         "GitHub": bool(contact_details["github"]),
-        "Portfolio": bool(contact_details["portfolio"]),
+        "Portfolio (optional)": bool(contact_details["portfolio"]),
     }
     overall_assessment = {
         "title": assessment[0],
@@ -117,6 +199,7 @@ def process_resume_analysis(resume_skills, sections, contact_details, file, sect
         "contact": contact_status,
         "contact_score": contact_score,
         "completeness_score": completeness_score,
+        "score_breakdown": score_breakdown,
         "sections": section_status,
         "resume_skills": sorted_resume_skills,
         "missing_skills": [],
@@ -133,6 +216,7 @@ def process_resume_analysis(resume_skills, sections, contact_details, file, sect
         "section_score": section_score,
         "contact_score": contact_score,
         "completeness_score": completeness_score,
+        "score_breakdown": score_breakdown,
         "resume_skills": sorted_resume_skills,
         "contact_details": contact_details,
     }
@@ -141,28 +225,33 @@ def process_resume_analysis(resume_skills, sections, contact_details, file, sect
 
 @router.post("/upload")
 def upload_resume(request: Request, resume : UploadFile = File(None) , job_description: str = Form("")):
-    user = get_current_user(request)
+    user = get_current_user(request, offline=True)
     if not user:
         return JSONResponse({"error": "Please log in."}, status_code=401)
-    job_description = job_description.strip().lower()
     if not resume:
         error_response = {"error": "Please upload a resume."}
         return JSONResponse(error_response, 400)
+    if not (resume.filename or "").lower().endswith(".pdf"):
+        return JSONResponse({"error": "Unsupported file type. Please upload a PDF resume."}, 415)
+    job_description = job_description.strip() if isinstance(job_description, str) else ""
 
     try:
         resume_text = extract_text_from_pdf(resume.file)
+    except PDFTextExtractionError as exc:
+        logger.warning("Resume text extraction failed: %s", exc)
+        return JSONResponse({"error": str(exc)}, 422)
     except Exception:
         logger.exception("Unable to read the uploaded PDF.")
         error_response = {"error": "Unable to read the uploaded PDF."}
         return JSONResponse(error_response, 400)
 
     sections = extract_resume_sections(resume_text)
-    known_skills = load_skills()
-    if not known_skills:
+    skill_aliases = load_skills()
+    if not skill_aliases:
         error_response = {"error": "Skills database could not be loaded."}
         return JSONResponse(error_response, 500)
 
-    resume_skills = extract_skills(resume_text, known_skills)
+    resume_skills = extract_skills(resume_text, skill_aliases)
     contact_details = extract_contact_details(resume_text)
     section_score = calculate_section_score(sections)
     contact_score = calculate_contact_score(contact_details)
@@ -170,7 +259,7 @@ def upload_resume(request: Request, resume : UploadFile = File(None) , job_descr
     supabase = extensions.supabase
 
     if job_description:
-        return process_job_match(job_description, known_skills, resume_skills, sections, contact_details, resume, section_score, contact_score, completeness_score, supabase, user["id"])
+        return process_job_match(job_description, skill_aliases, resume_skills, resume_text, sections, contact_details, resume, section_score, contact_score, completeness_score, supabase, user["id"])
 
 
     return process_resume_analysis(resume_skills, sections, contact_details, resume, section_score, contact_score, completeness_score, supabase, user["id"])

@@ -14,11 +14,11 @@ router = APIRouter()
 templates = Jinja2Templates(directory="templates")
 
 
-def login_and_redirect(user_id):
+def login_and_redirect(user_id, email=None, role="user"):
     response = RedirectResponse("/", status_code=303)
     response.set_cookie(
         key="access_token",
-        value=create_token(user_id),
+        value=create_token(user_id, email=email, role=role),
         httponly=True,
         samesite="lax",
         secure=COOKIE_SECURE,
@@ -80,7 +80,12 @@ def register_user(
             )
         raise
 
-    return login_and_redirect(new_user.data[0]["id"])
+    created_user = new_user.data[0]
+    return login_and_redirect(
+        created_user["id"],
+        email=created_user.get("email", email),
+        role=created_user.get("role", "user"),
+    )
     
 
 
@@ -88,7 +93,7 @@ def register_user(
 def login_user(request: Request, email: str = Form(...), password: str = Form(...)):
     email = email.strip().lower()
 
-    result = supabase.table("users").select("id, password_hash").eq("email", email).execute()
+    result = supabase.table("users").select("id, email, role, password_hash").eq("email", email).execute()
     user = result.data[0] if result.data else None
 
     if user is None or not verify_password(password, user["password_hash"]):
@@ -98,7 +103,7 @@ def login_user(request: Request, email: str = Form(...), password: str = Form(..
             status_code=401,
         )
 
-    return login_and_redirect(user["id"])
+    return login_and_redirect(user["id"], email=user.get("email", email), role=user.get("role", "user"))
 
 
 @router.post("/auth/logout")

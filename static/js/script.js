@@ -16,6 +16,10 @@
             .replace(/"/g, '&quot;')
             .replace(/'/g, '&#039;');
 
+    const skillItems = (items) => window.ResumePilotSkillUtils
+        ? window.ResumePilotSkillUtils.items(items)
+        : (Array.isArray(items) ? items.filter((item) => typeof item === 'string').map((item) => item.trim()).filter(Boolean) : []);
+
     const formatBytes = (bytes) => {
         if (!bytes || bytes === 0) return '0 B';
         const k = 1024;
@@ -24,7 +28,27 @@
         return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + ' ' + sizes[i];
     };
 
-    /* ==========================================================================
+    const loadOptionalScript = (src) => new Promise((resolve, reject) => {
+        const existing = document.querySelector(`script[data-optional-src="${src}"]`);
+        if (existing?.dataset.loaded === 'true') return resolve();
+        if (existing) {
+            existing.addEventListener('load', resolve, { once: true });
+            existing.addEventListener('error', reject, { once: true });
+            return;
+        }
+        const script = document.createElement('script');
+        script.src = src;
+        script.async = true;
+        script.dataset.optionalSrc = src;
+        script.addEventListener('load', () => {
+            script.dataset.loaded = 'true';
+            resolve();
+        }, { once: true });
+        script.addEventListener('error', reject, { once: true });
+        document.head.appendChild(script);
+    });
+
+    /* ============================================================================
        Toast Notifications
        ========================================================================== */
     const toastEl = document.getElementById('toast');
@@ -272,7 +296,7 @@
     const renderResult = (data) => {
         if (!resultSection) return;
 
-        const score = Math.max(0, Math.min(100, Math.round(Number(data.score || 0))));
+        const score = Math.max(0, Math.min(100, Number(data.score || 0)));
         const scoreCategory = getScoreCategory(score);
         const scoreAngle = Math.round(score * 3.6);
 
@@ -287,12 +311,17 @@
             : 'Your resume sections and technical skill keywords have been extracted.');
 
         // Skills lists
-        const matchedSkills = Array.isArray(data.matched_skills)
-            ? data.matched_skills
-            : Array.isArray(data.resume_skills)
-                ? data.resume_skills
-                : [];
-        const missingSkills = Array.isArray(data.missing_skills) ? data.missing_skills : [];
+        const matchedSkills = skillItems(Array.isArray(data.matched_skills) ? data.matched_skills : data.resume_skills);
+        const missingSkills = skillItems(data.missing_skills);
+        const partialSkills = skillItems(data.partial_skills);
+        const skillSummary = data.skill_summary && typeof data.skill_summary === 'object' ? data.skill_summary : null;
+        const matchedEvidence = Array.isArray(data.skill_matches)
+            ? data.skill_matches.filter((item) => item.status === 'matched' && item.evidence)
+            : [];
+        const scoreBreakdown = data.score_breakdown && typeof data.score_breakdown === 'object'
+            ? data.score_breakdown
+            : null;
+        const debugData = data.debug && typeof data.debug === 'object' ? data.debug : null;
 
         // Recommendations
         const recommendations = Array.isArray(data.recommendations)
@@ -310,7 +339,7 @@
                 <div class="score-ring-wrap">
                     <div class="score-ring" style="--score-angle: ${scoreAngle}deg;" role="img" aria-label="ATS Score: ${score}%">
                         <div class="score-ring-inner">
-                            <span class="score-ring-value">${score}%</span>
+                            <span class="score-ring-value">${score.toFixed(1)}%</span>
                             <span class="score-ring-label">ATS SCORE</span>
                         </div>
                     </div>
@@ -339,17 +368,18 @@
                 <div class="metric-card">
                     <div class="metric-header">
                         <span class="metric-label">Skill Match</span>
-                        <span class="metric-value">${Math.round(data.skill_score)}%</span>
+                        <span class="metric-value">${Number(data.skill_score).toFixed(2)}%</span>
                     </div>
                     <div class="progress-track">
                         <div class="progress-fill ${getScoreCategory(data.skill_score).class}" style="width: ${Math.round(data.skill_score)}%"></div>
                     </div>
+                    ${skillSummary ? `<small class="metric-detail">${Number(skillSummary.matched_count || 0)} matched · ${Number(skillSummary.partial_count || 0)} partial · ${Number(skillSummary.missing_count || 0)} missing of ${Number(skillSummary.total_skills || 0)}</small>` : ''}
                 </div>` : ''}
 
                 <div class="metric-card">
                     <div class="metric-header">
                         <span class="metric-label">Section Structure</span>
-                        <span class="metric-value">${Math.round(data.section_score || 0)}%</span>
+                        <span class="metric-value">${Number(data.section_score || 0).toFixed(1)}%</span>
                     </div>
                     <div class="progress-track">
                         <div class="progress-fill ${getScoreCategory(data.section_score).class}" style="width: ${Math.round(data.section_score || 0)}%"></div>
@@ -359,7 +389,7 @@
                 <div class="metric-card">
                     <div class="metric-header">
                         <span class="metric-label">Contact Details</span>
-                        <span class="metric-value">${Math.round(data.contact_score || 0)}%</span>
+                        <span class="metric-value">${Number(data.contact_score || 0).toFixed(1)}%</span>
                     </div>
                     <div class="progress-track">
                         <div class="progress-fill ${getScoreCategory(data.contact_score).class}" style="width: ${Math.round(data.contact_score || 0)}%"></div>
@@ -369,7 +399,7 @@
                 <div class="metric-card">
                     <div class="metric-header">
                         <span class="metric-label">Overall Completeness</span>
-                        <span class="metric-value">${Math.round(data.completeness_score || 0)}%</span>
+                        <span class="metric-value">${Number(data.completeness_score || 0).toFixed(1)}%</span>
                     </div>
                     <div class="progress-track">
                         <div class="progress-fill ${getScoreCategory(data.completeness_score).class}" style="width: ${Math.round(data.completeness_score || 0)}%"></div>
@@ -378,9 +408,35 @@
             </div>
         `;
 
+        if (scoreBreakdown) {
+            const components = Object.entries(scoreBreakdown.components || {})
+                .map(([name, component]) => `${name}: ${Number(component.score).toFixed(2)}% × ${component.weight}% = ${Number(component.contribution).toFixed(2)}%`)
+                .join(' + ');
+            const sectionCoverage = scoreBreakdown.required_sections || {};
+            const contactCoverage = scoreBreakdown.required_contacts || {};
+            const missingSections = Array.isArray(sectionCoverage.missing) && sectionCoverage.missing.length
+                ? ` Missing: ${sectionCoverage.missing.join(', ')}.`
+                : '';
+            const missingContacts = Array.isArray(contactCoverage.missing) && contactCoverage.missing.length
+                ? ` Missing: ${contactCoverage.missing.join(', ')}.`
+                : '';
+            html += `
+                <div class="contact-card score-explanation-card">
+                    <h3 class="card-title">How this score is calculated</h3>
+                    <p>${escapeHtml(components)} = ${Number(data.score || 0).toFixed(2)}%</p>
+                    <p>Core sections: ${Number(sectionCoverage.present || 0)}/${Number(sectionCoverage.total || 0)}.${escapeHtml(missingSections)}</p>
+                    <p>Required contact details: ${Number(contactCoverage.present || 0)}/${Number(contactCoverage.total || 0)}.${escapeHtml(missingContacts)}</p>
+                    <p>${escapeHtml(scoreBreakdown.completeness_note || '')}</p>
+                </div>
+            `;
+        }
+
         // Section availability checklist (for resume_analysis)
         if (!isJobMatch && data.sections && typeof data.sections === 'object') {
-            const standardSections = ['Summary', 'Skills', 'Projects', 'Education', 'Experience'];
+            const standardSections = [
+                'Summary', 'Skills', 'Projects', 'Education',
+                'Experience / Leadership (optional)', 'Achievements (optional)', 'Certifications (optional)',
+            ];
             html += `
                 <div class="sections-card">
                     <h3 class="card-title">
@@ -428,7 +484,7 @@
                         ${contact.github ? '✓ GitHub' : '✗ GitHub'}
                     </span>
                     <span class="contact-pill ${contact.portfolio ? 'is-active' : ''}">
-                        ${contact.portfolio ? '✓ Portfolio' : '✗ Portfolio'}
+                        ${contact.portfolio ? 'Portfolio (optional): found' : 'Portfolio (optional): not added'}
                     </span>
                 </div>
             </div>
@@ -439,27 +495,81 @@
             <div class="skills-grid">
                 <div class="skills-column">
                     <h3 class="card-title">
-                        ${isJobMatch ? `Matched Skills (${matchedSkills.length})` : `Detected Skills (${matchedSkills.length})`}
+                        ${isJobMatch ? `Matched Skills (${skillSummary ? skillSummary.matched_count : matchedSkills.length})` : `Detected Skills (${matchedSkills.length})`}
                     </h3>
                     <div class="chips-container">
                         ${matchedSkills.length > 0
-                            ? matchedSkills.map((s) => `<span class="skill-chip matched">${escapeHtml(s)}</span>`).join('')
+                            ? matchedSkills.map((s) => `<span class="skill-chip matched">${escapeHtml(s)}</span>`).join(' ')
                             : '<p class="empty-message">No technical skills detected yet.</p>'}
+                        ${matchedEvidence.map((item) => `<p class="skill-evidence-note"><strong>${escapeHtml(item.canonical_skill)} · Evidenced</strong>: ${escapeHtml(item.evidence)}</p>`).join('')}
                     </div>
                 </div>
 
+                ${isJobMatch ? `<div class="skills-column">
+                    <h3 class="card-title">Partial Match (${skillSummary ? skillSummary.partial_count : partialSkills.length})</h3>
+                    <div class="chips-container">
+                        ${partialSkills.length > 0
+                            ? partialSkills.map((skill) => {
+                                const detail = (data.skill_matches || []).find((item) => item.canonical_skill === skill) || {};
+                                const evidence = detail.evidence || data.skill_evidence?.[skill] || '';
+                                const amount = Number(detail.credit || 0) * 100;
+                                return `<div class="skill-evidence-note"><strong>${escapeHtml(skill)}</strong><span class="skill-contribution">${amount.toFixed(0)}% credit · weight ${Number(detail.weight || 1).toFixed(1)}</span><br>${escapeHtml(evidence || detail.reason || 'Partial evidence')}</div>`;
+                            }).join('')
+                            : '<p class="empty-message">No partial matches.</p>'}
+                    </div>
+                </div>` : ''}
+
                 <div class="skills-column">
                     <h3 class="card-title">
-                        Missing Skills (${missingSkills.length})
+                        Missing Skills (${skillSummary ? skillSummary.missing_count : missingSkills.length})
                     </h3>
                     <div class="chips-container">
                         ${missingSkills.length > 0
-                            ? missingSkills.map((s) => `<span class="skill-chip missing">${escapeHtml(s)}</span>`).join('')
+                            ? missingSkills.map((s) => `<span class="skill-chip missing">${escapeHtml(s)}</span>`).join(' ')
                             : `<p class="empty-message">${isJobMatch ? 'None! All job description keywords are present.' : 'Add a job description to detect missing skills.'}</p>`}
                     </div>
                 </div>
             </div>
         `;
+
+        if (isJobMatch && debugData) {
+            const renderDebugList = (items) => Array.isArray(items) && items.length
+                ? `<ul>${items.map((item) => `<li>${escapeHtml(item)}</li>`).join('')}</ul>`
+                : '<p>None</p>';
+            const renderEvidence = (items) => Array.isArray(items) && items.length
+                ? items.map((item) => `
+                    <article class="debug-evidence-item">
+                        <strong>${escapeHtml(item.canonical_skill || '')}</strong>
+                        <span>${escapeHtml(item.category || '')} · ${Math.round(Number(item.confidence || 0) * 100)}%</span>
+                        <small>Source: ${escapeHtml(item.source_section || 'resume')}</small>
+                        <blockquote>${escapeHtml(item.evidence || '')}</blockquote>
+                    </article>
+                `).join('')
+                : '<p>None</p>';
+            html += `
+                <details class="feedback-card skill-debug">
+                    <summary class="card-title">Skill extraction debug</summary>
+                    <p><strong>Extraction coverage:</strong> ${Math.round(Number(debugData.extraction_coverage_percent || 0))}%</p>
+                    <h4>Original JD requirements</h4>
+                    <pre>${escapeHtml((debugData.original_jd_requirements || []).join('\n'))}</pre>
+                    <h4>Requirement groups and constituents</h4>
+                    ${Array.isArray(debugData.requirement_groups) && debugData.requirement_groups.length
+                        ? `<ul>${debugData.requirement_groups.map((group) => `<li><strong>${escapeHtml(group.original_text || '')}</strong><br>Raw: ${escapeHtml((group.raw_skills || []).join(', ') || 'None')}<br>Normalized: ${escapeHtml((group.normalized_skills || []).join(', ') || 'None')}</li>`).join('')}</ul>`
+                        : '<p>None</p>'}
+                    <h4>Raw extracted JD skills</h4>${renderDebugList(debugData.raw_extracted_jd_skills)}
+                    <h4>Normalized JD skills</h4>${renderDebugList(debugData.normalized_jd_skills)}
+                    <h4>Raw extracted resume text</h4>
+                    <pre>${escapeHtml(debugData.raw_extracted_resume_text || '')}</pre>
+                    <h4>Normalized resume skills</h4>${renderDebugList(debugData.normalized_resume_skills)}
+                    <h4>Exact matches with evidence</h4>${renderEvidence(debugData.exact_matches)}
+                    <h4>Semantic matches with evidence</h4>${renderEvidence(debugData.semantic_matches)}
+                    <h4>Contextual evidence matches</h4>${renderEvidence(debugData.evidence_matches)}
+                    <h4>Related skills with evidence</h4>${renderEvidence(debugData.related_skills)}
+                    <h4>Missing skills</h4>${renderDebugList(debugData.missing_skills)}
+                    <h4>Unparsed requirements</h4>${renderDebugList(debugData.unparsed_requirements)}
+                </details>
+            `;
+        }
 
         // Actionable Recommendations
         if (recommendations.length > 0) {
@@ -690,8 +800,23 @@
         // Download PDF button (html2canvas + jsPDF)
         if (downloadPdfBtn) {
             downloadPdfBtn.addEventListener('click', async () => {
-                if (!aiRawMarkdown || !window.html2canvas || !window.jspdf) {
-                    showToast('PDF tools are still loading. Please try again.');
+                if (!aiRawMarkdown) {
+                    showToast('Generate AI suggestions before downloading them.');
+                    return;
+                }
+                try {
+                    if (!window.html2canvas) {
+                        await loadOptionalScript('https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js');
+                    }
+                    if (!window.jspdf) {
+                        await loadOptionalScript('https://cdn.jsdelivr.net/npm/jspdf@2.5.2/dist/jspdf.umd.min.js');
+                    }
+                } catch {
+                    showToast('Suggestion PDF export needs an internet connection. Your ATS report is still available.');
+                    return;
+                }
+                if (!window.html2canvas || !window.jspdf) {
+                    showToast('Suggestion PDF export tools are unavailable. Your ATS report is still available.');
                     return;
                 }
 
@@ -846,10 +971,17 @@
             aiRawMarkdown = data.response || '';
             const rawHtml = data.html || '';
 
-            // MUST sanitize HTML with DOMPurify
+            // DOMPurify is an optional online enhancement; offline fallback is escaped text.
+            if (typeof window.DOMPurify === 'undefined') {
+                try {
+                    await loadOptionalScript('https://cdn.jsdelivr.net/npm/dompurify@3.2.6/dist/purify.min.js');
+                } catch {
+                    // Continue with escaped plain text below.
+                }
+            }
             const cleanHtml = typeof window.DOMPurify !== 'undefined'
                 ? window.DOMPurify.sanitize(rawHtml)
-                : rawHtml;
+                : `<pre class="ai-markdown-fallback">${escapeHtml(data.response || '')}</pre>`;
 
             if (aiContent) {
                 aiContent.innerHTML = cleanHtml;

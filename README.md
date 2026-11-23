@@ -149,39 +149,41 @@ Resume Sections   Contact Details   Skill Extraction
 
 ```text
 ATS checker/
-├── app.py
+├── main.py
 ├── config.py
+├── deps.py
 ├── extensions.py
 ├── routes/
 │   ├── __init__.py
-│   ├── home.py
-│   ├── upload.py
+│   ├── auth.py
 │   ├── ai.py
 │   ├── history.py
-│   └── report.py
+│   ├── home.py
+│   ├── report.py
+│   ├── security.py
+│   └── upload.py
 ├── services/
 │   ├── __init__.py
-│   ├── pdf_parser.py
-│   ├── section_extractor.py
-│   ├── skills_service.py
-│   ├── contact_service.py
-│   ├── scoring_service.py
-│   ├── feedback_service.py
 │   ├── ai_service.py
-│   └── pdf_report_service.py
-├── utils/
-│   ├── __init__.py
-│   ├── constants.py
-│   ├── logger.py
-│   └── helpers.py
-├── templates/
+│   ├── contact_service.py
+│   ├── feedback_service.py
+│   ├── pdf_parser.py
+│   ├── pdf_report_service.py
+│   ├── scoring_service.py
+│   ├── section_extractor.py
+│   └── skills_service.py
 ├── static/
+│   ├── css/
+│   └── js/
+├── templates/
+├── tests/
+├── utils/
+│   ├── constants.py
+│   └── logger.py
 ├── skills.json
 ├── requirements.txt
-└── .env
+└── runtime.txt
 ```
-
-*Note: Update the filenames in this tree to match your actual FastAPI project structure.*
 
 ---
 
@@ -220,6 +222,50 @@ source venv/bin/activate
 pip install -r requirements.txt
 ```
 
+### OCR for scanned PDFs
+
+Selectable-text PDFs continue to use the fast PyPDF2 parser. If a PDF has no
+usable text layer, ResumePilot renders every page with PyMuPDF and reads the
+images with `pytesseract`. The Python packages are installed by
+`requirements.txt`; the Tesseract OCR application must also be installed on the
+machine running the app.
+
+**Windows:** Install Tesseract OCR (for example, using the UB Mannheim Windows
+installer). ResumePilot detects Tesseract on `PATH` and in common Windows
+install locations, including `C:\Program Files\Tesseract-OCR\tesseract.exe`.
+To use another installation, set `TESSERACT_CMD` in `.env`, for example:
+
+```env
+TESSERACT_CMD=C:\Program Files\Tesseract-OCR\tesseract.exe
+```
+
+**Ubuntu/Debian:**
+
+```bash
+sudo apt-get update && sudo apt-get install -y tesseract-ocr
+```
+
+**macOS (Homebrew):**
+
+```bash
+brew install tesseract
+```
+
+OCR runs only when selectable text is empty or below the parser's minimum
+threshold. If neither extraction method produces readable text, upload returns
+an error rather than scoring an empty resume.
+
+### Render deployment
+
+The Tesseract engine is an operating-system package and is not installed by
+`pip install pytesseract`. For Render, use the included `Dockerfile` so the
+runtime image installs both `tesseract-ocr` and English OCR data. In the Render
+service settings, change the service runtime to **Docker** and deploy the
+repository's Dockerfile. Keep your existing Supabase, Groq, and JWT environment
+variables in the Render dashboard. `TESSERACT_CMD` is optional in this image
+because Tesseract is installed on `PATH`; set it only if you use a custom
+binary path.
+
 ---
 
 ## 4️⃣ Download spaCy Model
@@ -235,13 +281,15 @@ python -m spacy download en_core_web_sm
 Create a `.env` file in the project root.
 
 ```env
-SECRET_KEY=your_secret_key
-SUPABASE_URL=your_supabase_url
-SUPABASE_KEY=your_supabase_secret_key
+SUPABASE_URL=https://your-project.supabase.co
+SUPABASE_KEY=your_supabase_key
 GROQ_API_KEY=your_groq_api_key
+JWT_SECRET_KEY=replace_with_a_long_random_secret
+COOKIE_SECURE=false
 ```
 
 **Important:** Never commit your `.env` file or expose your Supabase secret key publicly.
+Set `COOKIE_SECURE=true` when serving the site over HTTPS (including Render).
 
 ---
 
@@ -250,7 +298,7 @@ GROQ_API_KEY=your_groq_api_key
 Start the FastAPI server using Uvicorn:
 
 ```bash
-uvicorn app2:app --reload
+uvicorn main:app --reload
 ```
 
 Open your browser:
